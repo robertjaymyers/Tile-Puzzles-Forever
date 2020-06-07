@@ -24,6 +24,8 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 		shufflePuzzlesList();
 		addCurrentPuzzleToScene();
 	}
+	else
+		gameState = GameState::INVALID;
 }
 
 void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)

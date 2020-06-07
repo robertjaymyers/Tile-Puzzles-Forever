@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QSplashScreen>
 #include <QCoreApplication>
+#include <QMessageBox>
 #include <QSound>
 #include <QDebug>
 #include <random>
@@ -35,7 +36,7 @@ private:
 	std::unique_ptr<QGraphicsPixmapItem> splashPuzzleComplete = std::make_unique<QGraphicsPixmapItem>(nullptr);
 	std::unique_ptr<QGraphicsPixmapItem> splashTotalVictory = std::make_unique<QGraphicsPixmapItem>(nullptr);
 
-	enum class GameState { SOLVING, PUZZLE_COMPLETE, TOTAL_VICTORY };
+	enum class GameState { INVALID, SOLVING, PUZZLE_COMPLETE, TOTAL_VICTORY };
 	GameState gameState = GameState::SOLVING;
 
 	enum class SwapState { NONE, CHOOSING };
