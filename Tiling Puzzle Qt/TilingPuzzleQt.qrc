@@ -1,4 +1,6 @@
 <RCC>
-    <qresource prefix="TilingPuzzleQt">
+    <qresource prefix="/TilingPuzzleQt">
+        <file>Resources/splashPuzzleComplete.png</file>
+        <file>Resources/splashTotalVictory.png</file>
     </qresource>
 </RCC>

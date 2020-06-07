@@ -1,16 +1,30 @@
 #include "PuzzleDisplayScene.h"
 
-// TODO: Implement splash screen for transitions
-
 // possible TODO? allow user to set the number of pieces a puzzle is broken up into?
 // default is 16, but could be harder difficulty (could be harder on memory though, more pixmap images stored)
 
 PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 	: QGraphicsScene(parent)
 {
-	dirIteratorLoadPuzzles("C:/Users/Robert/source/repos/Tiling Puzzle Qt/x64/Debug/puzzles");
-	shufflePuzzlesList();
-	addCurrentPuzzleToScene();
+	splashPuzzleComplete.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashPuzzleComplete.png"));
+	splashTotalVictory.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashTotalVictory.png"));
+
+	splashPuzzleComplete.get()->setZValue(splashZ);
+	splashTotalVictory.get()->setZValue(splashZ);
+
+	splashPuzzleComplete.get()->hide();
+	splashTotalVictory.get()->hide();
+
+	this->addItem(splashPuzzleComplete.get());
+	this->addItem(splashTotalVictory.get());
+
+	dirIteratorLoadPuzzles(appExecutablePath + "/puzzles");
+
+	if (puzzlesList.size() > 0)
+	{
+		shufflePuzzlesList();
+		addCurrentPuzzleToScene();
+	}
 }
 
 void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -62,9 +76,15 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 								// implement splash screen here
 								qDebug("WINNER!");
 								if (puzzleCurrent + 1 > puzzlesList.size() - 1)
+								{
+									splashTotalVictory.get()->show();
 									gameState = GameState::TOTAL_VICTORY;
+								}
 								else
-									gameState = GameState::TRANSITIONING;
+								{
+									splashPuzzleComplete.get()->show();
+									gameState = GameState::PUZZLE_COMPLETE;
+								}
 							}
 						}
 						swapState = SwapState::NONE;
@@ -72,6 +92,20 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 					return;
 				}
 			}
+		}
+	}
+	else if (gameState == GameState::PUZZLE_COMPLETE)
+	{
+		if (event->button() == Qt::LeftButton)
+		{
+			splashPuzzleComplete.get()->hide();
+		}
+	}
+	else if (gameState == GameState::TOTAL_VICTORY)
+	{
+		if (event->button() == Qt::LeftButton)
+		{
+			splashTotalVictory.get()->hide();
 		}
 	}
 }
@@ -84,11 +118,12 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 	}
 	else
 	{
-		if (gameState == GameState::TRANSITIONING)
+		if (gameState == GameState::PUZZLE_COMPLETE)
 		{
 			removeCurrentPuzzleFromScene();
 			puzzleCurrent++;
 			addCurrentPuzzleToScene();
+			splashPuzzleComplete.get()->hide();
 			gameState = GameState::SOLVING;
 		}
 		else if (gameState == GameState::TOTAL_VICTORY)
@@ -99,6 +134,7 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 				shufflePuzzlesList();
 				puzzleCurrent = 0;
 				addCurrentPuzzleToScene();
+				splashTotalVictory.get()->hide();
 				gameState = GameState::SOLVING;
 			}
 		}
@@ -185,6 +221,7 @@ void PuzzleDisplayScene::addCurrentPuzzleToScene()
 
 	for (int i = 0; i < puzzlesList[puzzleCurrent].size(); i++)
 	{
+		puzzlesList[puzzleCurrent][i].item.get()->setZValue(puzzleZ);
 		puzzlesList[puzzleCurrent][i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
 		this->addItem(puzzlesList[puzzleCurrent][i].item.get());
 	}

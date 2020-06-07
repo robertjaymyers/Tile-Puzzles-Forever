@@ -3,13 +3,7 @@
 #include "PuzzleDisplayScene.h"
 #include <QGraphicsView>
 #include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
-#include <QMouseEvent>
-#include <QPushButton>
 #include <QDebug>
-#include <random>
-#include <chrono>
-#include <algorithm>
 
 class PuzzleDisplay : public QGraphicsView
 {

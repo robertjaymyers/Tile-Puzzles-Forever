@@ -5,6 +5,8 @@
 #include <QKeyEvent>
 #include <QDirIterator>
 #include <QFileInfo>
+#include <QSplashScreen>
+#include <QCoreApplication>
 #include <QDebug>
 #include <random>
 #include <chrono>
@@ -22,9 +24,17 @@ protected:
 	void keyReleaseEvent(QKeyEvent *event);
 
 private:
+	const QString appExecutablePath = QCoreApplication::applicationDirPath();
+
 	QStringList supportedImgTypes = { "BMP", "GIF", "PNG", "JPG" };
 
-	enum class GameState { SOLVING, TRANSITIONING, TOTAL_VICTORY };
+	const int puzzleZ = 1;
+	const int splashZ = 2;
+
+	std::unique_ptr<QGraphicsPixmapItem> splashPuzzleComplete = std::make_unique<QGraphicsPixmapItem>(nullptr);
+	std::unique_ptr<QGraphicsPixmapItem> splashTotalVictory = std::make_unique<QGraphicsPixmapItem>(nullptr);
+
+	enum class GameState { SOLVING, PUZZLE_COMPLETE, TOTAL_VICTORY };
 	GameState gameState = GameState::SOLVING;
 
 	enum class SwapState { NONE, CHOOSING };
