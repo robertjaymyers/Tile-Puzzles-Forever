@@ -22,8 +22,6 @@ protected:
 	void keyReleaseEvent(QKeyEvent *event);
 
 private:
-	//QPixmap testImg = QPixmap("C:/Users/Robert/source/repos/Tiling Puzzle Qt/x64/Debug/puzzles/lara17.png");
-
 	QStringList supportedImgTypes = { "BMP", "GIF", "PNG", "JPG" };
 
 	enum class GameState { SOLVING, TRANSITIONING, TOTAL_VICTORY };
@@ -42,7 +40,6 @@ private:
 		SelectionState selectionState = SelectionState::UNSELECTED;
 		std::unique_ptr<QGraphicsPixmapItem> item = std::make_unique<QGraphicsPixmapItem>(nullptr);
 	};
-	//std::vector<puzzlePiece> puzzlePiecesAll;
 
 	std::vector<QPointF> puzzlePieceCoordsForShuffle;
 

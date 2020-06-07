@@ -1,74 +1,16 @@
 #include "PuzzleDisplayScene.h"
 
+// TODO: Implement splash screen for transitions
+
+// possible TODO? allow user to set the number of pieces a puzzle is broken up into?
+// default is 16, but could be harder difficulty (could be harder on memory though, more pixmap images stored)
+
 PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 	: QGraphicsScene(parent)
 {
-	//int puzzleAnchorX = 0;
-	//int puzzleAnchorY = 0;
-	//int puzzlePosX = puzzleAnchorX;
-	//int puzzlePosY = puzzleAnchorY;
-	//int widthPieceSize = testImg.width() / 4;
-	//int heightPieceSize = testImg.height() / 4;
-	//for (int col = 0; col < 4; col++)
-	//{
-	//	for (int row = 0; row < 4; row++)
-	//	{
-	//		puzzlePiecesAll.emplace_back
-	//		(
-	//			puzzlePiece
-	//			{
-	//				QPoint(row, col),
-	//				QPointF(puzzlePosX, puzzlePosY),
-	//				widthPieceSize,
-	//				heightPieceSize
-	//			}
-	//		);
-	//		puzzlePiecesAll.back().item.get()->setPixmap
-	//		(
-	//			testImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
-	//		);
-	//		puzzlePieceCoordsForShuffle.emplace_back(QPointF(puzzlePosX, puzzlePosY));
-	//		puzzlePosX += widthPieceSize;
-	//	}
-	//	puzzlePosY += heightPieceSize;
-	//	puzzlePosX = puzzleAnchorX;
-	//}
-
 	dirIteratorLoadPuzzles("C:/Users/Robert/source/repos/Tiling Puzzle Qt/x64/Debug/puzzles");
 	shufflePuzzlesList();
 	addCurrentPuzzleToScene();
-	/*for (const auto& piece : puzzlesList[puzzleCurrent])
-	{
-		puzzlePieceCoordsForShuffle.emplace_back(QPointF(piece.originalPos));
-	}
-	int seed = std::chrono::system_clock::now().time_since_epoch().count();
-	shuffle(puzzlePieceCoordsForShuffle.begin(), puzzlePieceCoordsForShuffle.end(), std::default_random_engine(seed));*/
-
-	//for (auto& piece : puzzlePiecesAll)
-	//{
-	//	piece.item.get()->setPos(piece.pos);
-	//	//scene.get()->addItem(piece.item.get());
-	//}
-
-	/*for (int i = 0; i < puzzlesList[puzzleCurrent].size(); i++)
-	{
-		puzzlesList[puzzleCurrent][i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
-		this->addItem(puzzlesList[puzzleCurrent][i].item.get());
-	}*/
-
-	/*for (int i = 0; i < (16 / 4); i++)
-	{
-		for (int j = 0; j < (16 / 4); j++)
-		{
-
-		}
-	}*/
-
-	//puzzle.get()->setPixmap(QPixmap("C:/Users/Robert/source/repos/Tiling Puzzle Qt/x64/Debug/puzzles/lara17.png"));
-	//scene.get()->setSceneRect(this->rect());
-	//fitInView(scene.get()->sceneRect(), Qt::KeepAspectRatio);
-
-	qDebug() << this->sceneRect();
 }
 
 void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -114,16 +56,11 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 							puzzlesList[puzzleCurrent][selectedI].item.get()->setPos(posI);
 
 							selectedI = -1;
-							// check for win state
+
 							if (puzzleSolved())
 							{
+								// implement splash screen here
 								qDebug("WINNER!");
-
-								// if all puzzles in list have been completed,
-								// go to victory state for restart / reshuffle message
-
-								// otherwise, go to normal transition state
-								// (splash screen, wait for key input to continue - press any key maybe?)
 								if (puzzleCurrent + 1 > puzzlesList.size() - 1)
 									gameState = GameState::TOTAL_VICTORY;
 								else
@@ -183,13 +120,6 @@ void PuzzleDisplayScene::dirIteratorLoadPuzzles(const QString &dirPath)
 		QPixmap puzzleImg = QPixmap(filePath);
 
 		puzzlesList.resize(puzzlesList.size() + 1);
-		/*puzzlesList.emplace_back
-		(
-			std::vector<puzzlePiece>
-			{
-
-			}
-		);*/
 
 		int puzzleAnchorX = 0;
 		int puzzleAnchorY = 0;
