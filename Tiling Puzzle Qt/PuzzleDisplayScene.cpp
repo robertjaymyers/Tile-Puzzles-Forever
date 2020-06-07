@@ -76,11 +76,15 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 								qDebug("WINNER!");
 								if (puzzleCurrent + 1 > puzzlesList.size() - 1)
 								{
+									if (QFile(appExecutablePath + "/audio/puzzleComplete.wav").exists())
+										QSound::play(appExecutablePath + "/audio/totalVictory.wav");
 									splashTotalVictory.get()->show();
 									gameState = GameState::TOTAL_VICTORY;
 								}
 								else
 								{
+									if (QFile(appExecutablePath + "/audio/puzzleComplete.wav").exists())
+										QSound::play(appExecutablePath + "/audio/puzzleComplete.wav");
 									splashPuzzleComplete.get()->show();
 									gameState = GameState::PUZZLE_COMPLETE;
 								}
