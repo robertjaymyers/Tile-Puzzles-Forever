@@ -40,6 +40,13 @@ private:
 	enum class SwapState { NONE, CHOOSING };
 	SwapState swapState = SwapState::NONE;
 	int selectedI = -1;
+
+	// Determines how many pieces puzzles get broken up into.
+	// Ex: 4 would be used as 4*4 = 16 pieces, 5 would be 5*5 = 25 pieces, etc.
+	const int puzzlePiecesMultiplierMin = 2;
+	const int puzzlePiecesMultiplierMax = 20;
+	int puzzlePiecesMultiplier = 4;
+
 	struct puzzlePiece
 	{
 		const QPoint gridPoint;
@@ -56,9 +63,11 @@ private:
 	int puzzleCurrent = 0;
 	std::vector<std::vector<puzzlePiece>> puzzlesList;
 
+	void prefLoad();
 	void dirIteratorLoadPuzzles(const QString &dirPath);
 	void shufflePuzzlesList();
 	bool puzzleSolved();
 	void addCurrentPuzzleToScene();
 	void removeCurrentPuzzleFromScene();
+	QString extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom);
 };

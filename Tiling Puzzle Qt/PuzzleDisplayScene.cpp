@@ -1,11 +1,10 @@
 #include "PuzzleDisplayScene.h"
 
-// possible TODO? allow user to set the number of pieces a puzzle is broken up into?
-// default is 16, but could be harder difficulty (could be harder on memory though, more pixmap images stored)
-
 PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 	: QGraphicsScene(parent)
 {
+	prefLoad();
+
 	splashPuzzleComplete.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashPuzzleComplete.png"));
 	splashTotalVictory.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashTotalVictory.png"));
 
@@ -141,6 +140,30 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 	}
 }
 
+void PuzzleDisplayScene::prefLoad()
+{
+	QFile fileRead(appExecutablePath + "/config.txt");
+	if (fileRead.open(QIODevice::ReadOnly))
+	{
+		QTextStream contents(&fileRead);
+		while (!contents.atEnd())
+		{
+			QString line = contents.readLine();
+			if (line.contains("puzzlePiecesMultiplier="))
+			{
+				int multiplier = puzzlePiecesMultiplierMin;
+				multiplier = extractSubstringInbetweenQt("=", "", line).toInt();
+				if (multiplier >= puzzlePiecesMultiplierMin && multiplier <= puzzlePiecesMultiplierMax)
+				{
+					puzzlePiecesMultiplier = multiplier;
+				}
+				break;
+			}
+		}
+		fileRead.close();
+	}
+}
+
 void PuzzleDisplayScene::dirIteratorLoadPuzzles(const QString &dirPath)
 {
 	qDebug() << dirPath;
@@ -161,11 +184,11 @@ void PuzzleDisplayScene::dirIteratorLoadPuzzles(const QString &dirPath)
 		int puzzleAnchorY = 0;
 		int puzzlePosX = puzzleAnchorX;
 		int puzzlePosY = puzzleAnchorY;
-		int widthPieceSize = puzzleImg.width() / 4;
-		int heightPieceSize = puzzleImg.height() / 4;
-		for (int col = 0; col < 4; col++)
+		int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
+		int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
+		for (int col = 0; col < puzzlePiecesMultiplier; col++)
 		{
-			for (int row = 0; row < 4; row++)
+			for (int row = 0; row < puzzlePiecesMultiplier; row++)
 			{
 				puzzlesList.back().emplace_back
 				(
@@ -235,4 +258,36 @@ void PuzzleDisplayScene::removeCurrentPuzzleFromScene()
 	{
 		this->removeItem(piece.item.get());
 	}
+}
+
+QString PuzzleDisplayScene::extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom)
+{
+	QString extracted = "";
+	int posFound = 0;
+
+	if (!strBegin.isEmpty() && !strEnd.isEmpty())
+	{
+		while (strExtractFrom.indexOf(strBegin, posFound, Qt::CaseSensitive) != -1)
+		{
+			int posBegin = strExtractFrom.indexOf(strBegin, posFound, Qt::CaseSensitive) + strBegin.length();
+			int posEnd = strExtractFrom.indexOf(strEnd, posBegin, Qt::CaseSensitive);
+			extracted += strExtractFrom.mid(posBegin, posEnd - posBegin);
+			posFound = posEnd;
+		}
+	}
+	else if (strBegin.isEmpty() && !strEnd.isEmpty())
+	{
+		int posBegin = 0;
+		int posEnd = strExtractFrom.indexOf(strEnd, posBegin, Qt::CaseSensitive);
+		extracted += strExtractFrom.mid(posBegin, posEnd - posBegin);
+		posFound = posEnd;
+	}
+	else if (!strBegin.isEmpty() && strEnd.isEmpty())
+	{
+		int posBegin = strExtractFrom.indexOf(strBegin, posFound, Qt::CaseSensitive) + strBegin.length();
+		int posEnd = strExtractFrom.length();
+		extracted += strExtractFrom.mid(posBegin, posEnd - posBegin);
+		posFound = posEnd;
+	}
+	return extracted;
 }
