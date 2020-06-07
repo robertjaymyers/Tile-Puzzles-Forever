@@ -17,7 +17,7 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 	this->addItem(splashPuzzleComplete.get());
 	this->addItem(splashTotalVictory.get());
 
-	dirIteratorLoadPuzzles(appExecutablePath + "/puzzles");
+	dirIteratorLoadPuzzles(puzzleLoadPath);
 
 	if (puzzlesList.size() > 0)
 	{
@@ -157,6 +157,13 @@ void PuzzleDisplayScene::prefLoad()
 		while (!contents.atEnd())
 		{
 			QString line = contents.readLine();
+
+			// If a line has // at the beginning, we treat it as a comment and move on.
+			// Doing this as a precaution in the event of a comment accidentally containing
+			// a key phrase that is used to find something we want and triggering a false positive.
+			if (line[0] == '/' && line[1] == '/')
+				continue;
+
 			if (line.contains("puzzlePiecesMultiplier="))
 			{
 				int multiplier = puzzlePiecesMultiplierMin;
@@ -165,7 +172,14 @@ void PuzzleDisplayScene::prefLoad()
 				{
 					puzzlePiecesMultiplier = multiplier;
 				}
-				break;
+			}
+			else if (line.contains("loadPuzzlesFromFolder="))
+			{
+				QString path = extractSubstringInbetweenQt("=", "", line);
+				if (!path.isEmpty())
+				{
+					puzzleLoadPath = path;
+				}
 			}
 		}
 		fileRead.close();

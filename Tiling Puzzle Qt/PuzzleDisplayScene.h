@@ -27,6 +27,8 @@ protected:
 private:
 	const QString appExecutablePath = QCoreApplication::applicationDirPath();
 
+	QString puzzleLoadPath = appExecutablePath + "/puzzles";
+
 	QStringList supportedImgTypes = { "BMP", "GIF", "PNG", "JPG" };
 
 	const int puzzleZ = 1;
