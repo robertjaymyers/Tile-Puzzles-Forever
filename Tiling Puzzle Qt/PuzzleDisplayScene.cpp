@@ -127,6 +127,7 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 			puzzleCurrent++;
 			addCurrentPuzzleToScene();
 			splashPuzzleComplete.get()->hide();
+			emit puzzleChanged();
 			gameState = GameState::SOLVING;
 		}
 		else if (gameState == GameState::TOTAL_VICTORY)
@@ -138,6 +139,7 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 				puzzleCurrent = 0;
 				addCurrentPuzzleToScene();
 				splashTotalVictory.get()->hide();
+				emit puzzleChanged();
 				gameState = GameState::SOLVING;
 			}
 		}

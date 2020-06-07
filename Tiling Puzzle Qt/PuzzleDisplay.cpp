@@ -5,7 +5,7 @@ PuzzleDisplay::PuzzleDisplay(QWidget *parent)
 {
 	setStyleSheet("background: #FFFFFF; border: none;");
 
-	scene.get()->setParent(this->parent());
+	//scene.get()->setParent(this->parent());
 	setScene(scene.get());
 
 	/*
@@ -22,9 +22,19 @@ PuzzleDisplay::PuzzleDisplay(QWidget *parent)
 	// to be part of the program, since puzzles should be viewable within the screen in full.
 	setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+	connect(scene.get(), &PuzzleDisplayScene::puzzleChanged, this, &PuzzleDisplay::resizeForPuzzleChange);
 }
 
 void PuzzleDisplay::resizeEvent(QResizeEvent *event)
 {
 	fitInView(scene.get()->itemsBoundingRect(), Qt::KeepAspectRatio);
+	centerOn(scene.get()->itemsBoundingRect().center());
+}
+
+void PuzzleDisplay::resizeForPuzzleChange()
+{
+	fitInView(scene.get()->itemsBoundingRect(), Qt::KeepAspectRatio);
+	centerOn(scene.get()->itemsBoundingRect().center());
+	scene.get()->setSceneRect(scene->itemsBoundingRect());
 }

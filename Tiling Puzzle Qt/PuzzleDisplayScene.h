@@ -71,4 +71,7 @@ private:
 	void addCurrentPuzzleToScene();
 	void removeCurrentPuzzleFromScene();
 	QString extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom);
+
+signals:
+	void puzzleChanged();
 };
