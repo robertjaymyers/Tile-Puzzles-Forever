@@ -2,5 +2,6 @@
     <qresource prefix="/TilingPuzzleQt">
         <file>Resources/splashPuzzleComplete.png</file>
         <file>Resources/splashTotalVictory.png</file>
+        <file>Icon/ProgramIcon.ico</file>
     </qresource>
 </RCC>

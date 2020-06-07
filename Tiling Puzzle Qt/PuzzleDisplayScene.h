@@ -7,7 +7,6 @@
 #include <QFileInfo>
 #include <QSplashScreen>
 #include <QCoreApplication>
-#include <QMessageBox>
 #include <QSound>
 #include <QDebug>
 #include <random>
