@@ -70,6 +70,7 @@ private:
 	void dirIteratorLoadPuzzles(const QString &dirPath);
 	void shufflePuzzlesList();
 	bool puzzleSolved();
+	void startSplashTransition();
 	void addCurrentPuzzleToScene();
 	void removeCurrentPuzzleFromScene();
 	QString extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom);

@@ -74,22 +74,8 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 							if (puzzleSolved())
 							{
-								// implement splash screen here
 								qDebug("WINNER!");
-								if (puzzleCurrent + 1 > puzzlesList.size() - 1)
-								{
-									if (QFile(appExecutablePath + "/audio/puzzleComplete.wav").exists())
-										QSound::play(appExecutablePath + "/audio/totalVictory.wav");
-									splashTotalVictory.get()->show();
-									gameState = GameState::TOTAL_VICTORY;
-								}
-								else
-								{
-									if (QFile(appExecutablePath + "/audio/puzzleComplete.wav").exists())
-										QSound::play(appExecutablePath + "/audio/puzzleComplete.wav");
-									splashPuzzleComplete.get()->show();
-									gameState = GameState::PUZZLE_COMPLETE;
-								}
+								startSplashTransition();
 							}
 						}
 						swapState = SwapState::NONE;
@@ -123,7 +109,14 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 	}
 	else
 	{
-		if (gameState == GameState::PUZZLE_COMPLETE)
+		if (gameState == GameState::SOLVING)
+		{
+			if (event->key() == Qt::Key_Tab)
+			{
+				startSplashTransition();
+			}
+		}
+		else if (gameState == GameState::PUZZLE_COMPLETE)
 		{
 			removeCurrentPuzzleFromScene();
 			puzzleCurrent++;
@@ -252,6 +245,24 @@ bool PuzzleDisplayScene::puzzleSolved()
 		}
 	}
 	return true;
+}
+
+void PuzzleDisplayScene::startSplashTransition()
+{
+	if (puzzleCurrent + 1 > puzzlesList.size() - 1)
+	{
+		if (QFile(appExecutablePath + "/audio/puzzleComplete.wav").exists())
+			QSound::play(appExecutablePath + "/audio/totalVictory.wav");
+		splashTotalVictory.get()->show();
+		gameState = GameState::TOTAL_VICTORY;
+	}
+	else
+	{
+		if (QFile(appExecutablePath + "/audio/puzzleComplete.wav").exists())
+			QSound::play(appExecutablePath + "/audio/puzzleComplete.wav");
+		splashPuzzleComplete.get()->show();
+		gameState = GameState::PUZZLE_COMPLETE;
+	}
 }
 
 void PuzzleDisplayScene::addCurrentPuzzleToScene()
