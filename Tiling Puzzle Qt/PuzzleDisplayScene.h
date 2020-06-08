@@ -45,8 +45,9 @@ private:
 
 	QStringList supportedImgTypes = { "BMP", "GIF", "PNG", "JPG" };
 
-	const int puzzleZ = 1;
-	const int splashZ = 2;
+	const int puzzlePieceZ = 1;
+	const int puzzleWholeZ = 2;
+	const int splashZ = 3;
 
 	std::unique_ptr<QGraphicsPixmapItem> splashPuzzleComplete = std::make_unique<QGraphicsPixmapItem>(nullptr);
 	std::unique_ptr<QGraphicsPixmapItem> splashTotalVictory = std::make_unique<QGraphicsPixmapItem>(nullptr);
@@ -78,13 +79,17 @@ private:
 	std::vector<QPointF> puzzlePieceCoordsForShuffle;
 
 	int puzzleCurrent = 0;
-	std::vector<std::vector<puzzlePiece>> puzzlesList;
+	QPixmap puzzleCurrentWholeImg;
+	std::unique_ptr<QGraphicsPixmapItem> puzzleCurrentWholeItem = std::make_unique<QGraphicsPixmapItem>(nullptr);
+	std::vector<puzzlePiece> puzzleCurrentDissected;
+	std::vector<QString> puzzlesList;
 
 	void prefLoad();
 	void dirIteratorLoadPuzzles(const QString &dirPath);
 	void shufflePuzzlesList();
 	bool puzzleSolved();
 	void startSplashTransition();
+	void setUpCurrentPuzzle();
 	void addCurrentPuzzleToScene();
 	void removeCurrentPuzzleFromScene();
 	QString extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom);

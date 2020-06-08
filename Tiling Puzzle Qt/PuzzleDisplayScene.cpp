@@ -19,6 +19,10 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 {
 	prefLoad();
 
+	puzzleCurrentWholeItem.get()->setZValue(puzzleWholeZ);
+	puzzleCurrentWholeItem.get()->hide();
+	this->addItem(puzzleCurrentWholeItem.get());
+
 	splashPuzzleComplete.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashPuzzleComplete.png"));
 	splashTotalVictory.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashTotalVictory.png"));
 
@@ -36,6 +40,7 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 	if (puzzlesList.size() > 0)
 	{
 		shufflePuzzlesList();
+		setUpCurrentPuzzle();
 		addCurrentPuzzleToScene();
 	}
 	else
@@ -48,9 +53,9 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 	{
 		if (event->button() == Qt::LeftButton)
 		{
-			for (int i = 0; i < puzzlesList[puzzleCurrent].size(); i++)
+			for (int i = 0; i < puzzleCurrentDissected.size(); i++)
 			{
-				if (puzzlesList[puzzleCurrent][i].item.get()->contains(puzzlesList[puzzleCurrent][i].item.get()->mapFromScene(event->scenePos())))
+				if (puzzleCurrentDissected[i].item.get()->contains(puzzleCurrentDissected[i].item.get()->mapFromScene(event->scenePos())))
 				{
 					qDebug() << "clicked in area";
 					qDebug() << event->scenePos();
@@ -60,29 +65,29 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 					// just finished swapping the position of one image with another means they aren't.
 					if (swapState == SwapState::NONE)
 					{
-						puzzlesList[puzzleCurrent][i].item.get()->setOpacity(0.5);
-						puzzlesList[puzzleCurrent][i].selectionState = puzzlePiece::SelectionState::SELECTED;
+						puzzleCurrentDissected[i].item.get()->setOpacity(0.5);
+						puzzleCurrentDissected[i].selectionState = puzzlePiece::SelectionState::SELECTED;
 						swapState = SwapState::CHOOSING;
 						selectedI = i;
 					}
 					else if (swapState == SwapState::CHOOSING)
 					{
-						if (puzzlesList[puzzleCurrent][i].selectionState == puzzlePiece::SelectionState::SELECTED)
+						if (puzzleCurrentDissected[i].selectionState == puzzlePiece::SelectionState::SELECTED)
 						{
-							puzzlesList[puzzleCurrent][i].item.get()->setOpacity(1);
-							puzzlesList[puzzleCurrent][i].selectionState = puzzlePiece::SelectionState::UNSELECTED;
+							puzzleCurrentDissected[i].item.get()->setOpacity(1);
+							puzzleCurrentDissected[i].selectionState = puzzlePiece::SelectionState::UNSELECTED;
 							selectedI = -1;
 						}
-						else if (puzzlesList[puzzleCurrent][i].selectionState == puzzlePiece::SelectionState::UNSELECTED)
+						else if (puzzleCurrentDissected[i].selectionState == puzzlePiece::SelectionState::UNSELECTED)
 						{
-							puzzlesList[puzzleCurrent][selectedI].item.get()->setOpacity(1);
-							puzzlesList[puzzleCurrent][selectedI].selectionState = puzzlePiece::SelectionState::UNSELECTED;
+							puzzleCurrentDissected[selectedI].item.get()->setOpacity(1);
+							puzzleCurrentDissected[selectedI].selectionState = puzzlePiece::SelectionState::UNSELECTED;
 
-							QPointF posI = puzzlesList[puzzleCurrent][i].item.get()->pos();
-							QPointF posSelectedI = puzzlesList[puzzleCurrent][selectedI].item.get()->pos();
+							QPointF posI = puzzleCurrentDissected[i].item.get()->pos();
+							QPointF posSelectedI = puzzleCurrentDissected[selectedI].item.get()->pos();
 
-							puzzlesList[puzzleCurrent][i].item.get()->setPos(posSelectedI);
-							puzzlesList[puzzleCurrent][selectedI].item.get()->setPos(posI);
+							puzzleCurrentDissected[i].item.get()->setPos(posSelectedI);
+							puzzleCurrentDissected[selectedI].item.get()->setPos(posI);
 
 							selectedI = -1;
 
@@ -132,8 +137,7 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 		}
 		else if (gameState == GameState::PUZZLE_COMPLETE)
 		{
-			removeCurrentPuzzleFromScene();
-			puzzleCurrent++;
+			puzzleCurrentWholeItem.get()->hide();
 			addCurrentPuzzleToScene();
 			splashPuzzleComplete.get()->hide();
 			emit puzzleChanged();
@@ -146,6 +150,7 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 				removeCurrentPuzzleFromScene();
 				shufflePuzzlesList();
 				puzzleCurrent = 0;
+				setUpCurrentPuzzle();
 				addCurrentPuzzleToScene();
 				splashTotalVictory.get()->hide();
 				emit puzzleChanged();
@@ -205,39 +210,7 @@ void PuzzleDisplayScene::dirIteratorLoadPuzzles(const QString &dirPath)
 		if (!supportedImgTypes.contains(QFileInfo(filePath).suffix(), Qt::CaseInsensitive))
 			continue;
 
-		QPixmap puzzleImg = QPixmap(filePath);
-
-		puzzlesList.resize(puzzlesList.size() + 1);
-
-		int puzzleAnchorX = 0;
-		int puzzleAnchorY = 0;
-		int puzzlePosX = puzzleAnchorX;
-		int puzzlePosY = puzzleAnchorY;
-		int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
-		int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
-		for (int col = 0; col < puzzlePiecesMultiplier; col++)
-		{
-			for (int row = 0; row < puzzlePiecesMultiplier; row++)
-			{
-				puzzlesList.back().emplace_back
-				(
-					puzzlePiece
-					{
-						QPoint(row, col),
-						QPointF(puzzlePosX, puzzlePosY),
-						widthPieceSize,
-						heightPieceSize
-					}
-				);
-				puzzlesList.back().back().item.get()->setPixmap
-				(
-					puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
-				);
-				puzzlePosX += widthPieceSize;
-			}
-			puzzlePosY += heightPieceSize;
-			puzzlePosX = puzzleAnchorX;
-		}
+		puzzlesList.emplace_back(filePath);
 
 		qDebug() << "Loaded " + QString::number(puzzlesList.size()) + " puzzles.";
 	}
@@ -251,7 +224,7 @@ void PuzzleDisplayScene::shufflePuzzlesList()
 
 bool PuzzleDisplayScene::puzzleSolved()
 {
-	for (const auto& piece : puzzlesList[puzzleCurrent])
+	for (const auto& piece : puzzleCurrentDissected)
 	{
 		if (piece.item.get()->pos() != piece.originalPos)
 		{
@@ -276,32 +249,83 @@ void PuzzleDisplayScene::startSplashTransition()
 			QSound::play(appExecutablePath + "/audio/puzzleComplete.wav");
 		splashPuzzleComplete.get()->show();
 		gameState = GameState::PUZZLE_COMPLETE;
+
+		// We make whole version of img visible so nothing looks amiss.
+		// Then behind the scenes, we start transition by setting up the next puzzle.
+		// This way, by the time player hits key to go to the next puzzle,
+		// it's probably already loaded/ready to be added to the scene.
+		// We do it this way, since we're setting up each puzzle from filesystem on the fly,
+		// as opposed to storing it in memory (which would have a lot of memory overhead for a lot of puzzles).
+		puzzleCurrentWholeItem.get()->show();
+		removeCurrentPuzzleFromScene();
+		puzzleCurrent++;
+		setUpCurrentPuzzle();
 	}
+}
+
+void PuzzleDisplayScene::setUpCurrentPuzzle()
+{
+	puzzleCurrentDissected.clear();
+
+	QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
+
+	puzzleCurrentWholeImg = puzzleImg;
+
+	int puzzleAnchorX = 0;
+	int puzzleAnchorY = 0;
+	int puzzlePosX = puzzleAnchorX;
+	int puzzlePosY = puzzleAnchorY;
+	int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
+	int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
+	for (int col = 0; col < puzzlePiecesMultiplier; col++)
+	{
+		for (int row = 0; row < puzzlePiecesMultiplier; row++)
+		{
+			puzzleCurrentDissected.emplace_back
+			(
+				puzzlePiece
+				{
+					QPoint(row, col),
+					QPointF(puzzlePosX, puzzlePosY),
+					widthPieceSize,
+					heightPieceSize
+				}
+			);
+			puzzleCurrentDissected.back().item.get()->setPixmap
+			(
+				puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
+			);
+			puzzlePosX += widthPieceSize;
+		}
+		puzzlePosY += heightPieceSize;
+		puzzlePosX = puzzleAnchorX;
+	}
+
+	qDebug("Puzzle setup complete.");
 }
 
 void PuzzleDisplayScene::addCurrentPuzzleToScene()
 {
 	puzzlePieceCoordsForShuffle.clear();
-	for (const auto& piece : puzzlesList[puzzleCurrent])
+	for (const auto& piece : puzzleCurrentDissected)
 	{
 		puzzlePieceCoordsForShuffle.emplace_back(QPointF(piece.originalPos));
 	}
 	int seed = std::chrono::system_clock::now().time_since_epoch().count();
 	shuffle(puzzlePieceCoordsForShuffle.begin(), puzzlePieceCoordsForShuffle.end(), std::default_random_engine(seed));
 
-	for (int i = 0; i < puzzlesList[puzzleCurrent].size(); i++)
+	for (int i = 0; i < puzzleCurrentDissected.size(); i++)
 	{
-		puzzlesList[puzzleCurrent][i].item.get()->setZValue(puzzleZ);
-		puzzlesList[puzzleCurrent][i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
-		this->addItem(puzzlesList[puzzleCurrent][i].item.get());
+		puzzleCurrentDissected[i].item.get()->setZValue(puzzlePieceZ);
+		puzzleCurrentDissected[i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
+		this->addItem(puzzleCurrentDissected[i].item.get());
 	}
+	puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
 }
 
 void PuzzleDisplayScene::removeCurrentPuzzleFromScene()
 {
-	// We remove rather than using QGraphicsScene clear() function,
-	// to avoid deleting the items (they need to be reusable).
-	for (const auto& piece : puzzlesList[puzzleCurrent])
+	for (const auto& piece : puzzleCurrentDissected)
 	{
 		this->removeItem(piece.item.get());
 	}
