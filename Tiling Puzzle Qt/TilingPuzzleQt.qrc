@@ -3,5 +3,6 @@
         <file>Resources/splashPuzzleComplete.png</file>
         <file>Resources/splashTotalVictory.png</file>
         <file>Icon/ProgramIcon.ico</file>
+        <file>Resources/invisible.png</file>
     </qresource>
 </RCC>

@@ -53,43 +53,71 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 	{
 		if (event->button() == Qt::LeftButton)
 		{
-			for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+			if (puzzleType == PuzzleType::REARRANGEMENT)
 			{
-				if (puzzleCurrentDissected[i].item.get()->contains(puzzleCurrentDissected[i].item.get()->mapFromScene(event->scenePos())))
+				for (int i = 0; i < puzzleCurrentDissected.size(); i++)
 				{
-					qDebug() << "clicked in area";
-					qDebug() << event->scenePos();
+					if (puzzleCurrentDissected[i].item.get()->contains(puzzleCurrentDissected[i].item.get()->mapFromScene(event->scenePos())))
+					{
+						qDebug() << "clicked in area";
+						qDebug() << event->scenePos();
 
-					// Swapping state determines whether user is in the process of swapping or not.
-					// Having selected an image means they are. Having no image selected or having 
-					// just finished swapping the position of one image with another means they aren't.
-					if (swapState == SwapState::NONE)
-					{
-						puzzleCurrentDissected[i].item.get()->setOpacity(0.5);
-						puzzleCurrentDissected[i].selectionState = puzzlePiece::SelectionState::SELECTED;
-						swapState = SwapState::CHOOSING;
-						selectedI = i;
-					}
-					else if (swapState == SwapState::CHOOSING)
-					{
-						if (puzzleCurrentDissected[i].selectionState == puzzlePiece::SelectionState::SELECTED)
+						// Swapping state determines whether user is in the process of swapping or not.
+						// Having selected an image means they are. Having no image selected or having 
+						// just finished swapping the position of one image with another means they aren't.
+						if (swapState == SwapState::NONE)
 						{
-							puzzleCurrentDissected[i].item.get()->setOpacity(1);
-							puzzleCurrentDissected[i].selectionState = puzzlePiece::SelectionState::UNSELECTED;
-							selectedI = -1;
+							puzzleCurrentDissected[i].item.get()->setOpacity(0.5);
+							puzzleCurrentDissected[i].selectionState = puzzlePiece::SelectionState::SELECTED;
+							swapState = SwapState::CHOOSING;
+							selectedI = i;
 						}
-						else if (puzzleCurrentDissected[i].selectionState == puzzlePiece::SelectionState::UNSELECTED)
+						else if (swapState == SwapState::CHOOSING)
 						{
-							puzzleCurrentDissected[selectedI].item.get()->setOpacity(1);
-							puzzleCurrentDissected[selectedI].selectionState = puzzlePiece::SelectionState::UNSELECTED;
+							if (puzzleCurrentDissected[i].selectionState == puzzlePiece::SelectionState::SELECTED)
+							{
+								puzzleCurrentDissected[i].item.get()->setOpacity(1);
+								puzzleCurrentDissected[i].selectionState = puzzlePiece::SelectionState::UNSELECTED;
+								selectedI = -1;
+							}
+							else if (puzzleCurrentDissected[i].selectionState == puzzlePiece::SelectionState::UNSELECTED)
+							{
+								puzzleCurrentDissected[selectedI].item.get()->setOpacity(1);
+								puzzleCurrentDissected[selectedI].selectionState = puzzlePiece::SelectionState::UNSELECTED;
 
-							QPointF posI = puzzleCurrentDissected[i].item.get()->pos();
-							QPointF posSelectedI = puzzleCurrentDissected[selectedI].item.get()->pos();
+								swapPuzzlePieceLocation(puzzleCurrentDissected[i], puzzleCurrentDissected[selectedI]);
 
-							puzzleCurrentDissected[i].item.get()->setPos(posSelectedI);
-							puzzleCurrentDissected[selectedI].item.get()->setPos(posI);
+								selectedI = -1;
 
-							selectedI = -1;
+								if (puzzleSolved())
+								{
+									qDebug("WINNER!");
+									startSplashTransition();
+								}
+							}
+							swapState = SwapState::NONE;
+						}
+						return;
+					}
+				}
+			}
+			else if (puzzleType == PuzzleType::SLIDING)
+			{
+				// We only need to check if clicked on a spot adjacent to slide spot
+				// (one of a few possibilities)
+				// whichever is clicked swaps position with slide spot.
+				for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+				{
+					if (puzzleCurrentDissected[i].item.get()->contains(puzzleCurrentDissected[i].item.get()->mapFromScene(event->scenePos())))
+					{
+						qDebug() << "clicked in area";
+						qDebug() << event->scenePos();
+
+						qDebug() << puzzleCurrentDissected[i].gridPoint;
+
+						if (adjacentToSlideSpot(i))
+						{
+							swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], puzzleCurrentDissected[i]);
 
 							if (puzzleSolved())
 							{
@@ -97,9 +125,8 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 								startSplashTransition();
 							}
 						}
-						swapState = SwapState::NONE;
+						return;
 					}
-					return;
 				}
 			}
 		}
@@ -147,10 +174,7 @@ void PuzzleDisplayScene::keyReleaseEvent(QKeyEvent *event)
 		{
 			if (event->key() == Qt::Key_R)
 			{
-				removeCurrentPuzzleFromScene();
-				shufflePuzzlesList();
-				puzzleCurrent = 0;
-				setUpCurrentPuzzle();
+				puzzleCurrentWholeItem.get()->hide();
 				addCurrentPuzzleToScene();
 				splashTotalVictory.get()->hide();
 				emit puzzleChanged();
@@ -193,6 +217,17 @@ void PuzzleDisplayScene::prefLoad()
 					puzzleLoadPath = path;
 				}
 			}
+			else if (line.contains("puzzleTypeToPlay="))
+			{
+				QString str = extractSubstringInbetweenQt("=", "", line);
+				if (!str.isEmpty())
+				{
+					if (str == "REARRANGEMENT")
+						puzzleType = PuzzleType::REARRANGEMENT;
+					else if (str == "SLIDING")
+						puzzleType = PuzzleType::SLIDING;
+				}
+			}
 		}
 		fileRead.close();
 	}
@@ -222,6 +257,18 @@ void PuzzleDisplayScene::shufflePuzzlesList()
 	shuffle(puzzlesList.begin(), puzzlesList.end(), std::default_random_engine(seed));
 }
 
+bool PuzzleDisplayScene::shuffleMadePuzzleSolved()
+{
+	for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+	{
+		if (puzzleCurrentDissected[i].originalPos != puzzlePieceCoordsForShuffle[i])
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 bool PuzzleDisplayScene::puzzleSolved()
 {
 	for (const auto& piece : puzzleCurrentDissected)
@@ -242,6 +289,12 @@ void PuzzleDisplayScene::startSplashTransition()
 			QSound::play(appExecutablePath + "/audio/totalVictory.wav");
 		splashTotalVictory.get()->show();
 		gameState = GameState::TOTAL_VICTORY;
+
+		puzzleCurrentWholeItem.get()->show();
+		removeCurrentPuzzleFromScene();
+		shufflePuzzlesList();
+		puzzleCurrent = 0;
+		setUpCurrentPuzzle();
 	}
 	else
 	{
@@ -256,6 +309,9 @@ void PuzzleDisplayScene::startSplashTransition()
 		// it's probably already loaded/ready to be added to the scene.
 		// We do it this way, since we're setting up each puzzle from filesystem on the fly,
 		// as opposed to storing it in memory (which would have a lot of memory overhead for a lot of puzzles).
+
+		// In the case of sliding puzzle type, this is not only for Performance-O-Magic Show, but also necessary
+		// visual design since we want completion to show the "missing" piece.
 		puzzleCurrentWholeItem.get()->show();
 		removeCurrentPuzzleFromScene();
 		puzzleCurrent++;
@@ -265,40 +321,165 @@ void PuzzleDisplayScene::startSplashTransition()
 
 void PuzzleDisplayScene::setUpCurrentPuzzle()
 {
-	puzzleCurrentDissected.clear();
-
-	QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
-
-	puzzleCurrentWholeImg = puzzleImg;
-
-	int puzzleAnchorX = 0;
-	int puzzleAnchorY = 0;
-	int puzzlePosX = puzzleAnchorX;
-	int puzzlePosY = puzzleAnchorY;
-	int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
-	int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
-	for (int col = 0; col < puzzlePiecesMultiplier; col++)
+	if (puzzleType == PuzzleType::REARRANGEMENT)
 	{
-		for (int row = 0; row < puzzlePiecesMultiplier; row++)
+		puzzleCurrentDissected.clear();
+
+		QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
+
+		puzzleCurrentWholeImg = puzzleImg;
+
+		int puzzleAnchorX = 0;
+		int puzzleAnchorY = 0;
+		int puzzlePosX = puzzleAnchorX;
+		int puzzlePosY = puzzleAnchorY;
+		int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
+		int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
+		for (int col = 0; col < puzzlePiecesMultiplier; col++)
 		{
-			puzzleCurrentDissected.emplace_back
-			(
-				puzzlePiece
-				{
-					QPoint(row, col),
-					QPointF(puzzlePosX, puzzlePosY),
-					widthPieceSize,
-					heightPieceSize
-				}
-			);
-			puzzleCurrentDissected.back().item.get()->setPixmap
-			(
-				puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
-			);
-			puzzlePosX += widthPieceSize;
+			for (int row = 0; row < puzzlePiecesMultiplier; row++)
+			{
+				puzzleCurrentDissected.emplace_back
+				(
+					puzzlePiece
+					{
+						QPoint(row, col),
+						QPoint(row, col),
+						QPointF(puzzlePosX, puzzlePosY),
+						widthPieceSize,
+						heightPieceSize
+					}
+				);
+				puzzleCurrentDissected.back().item.get()->setPixmap
+				(
+					puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
+				);
+				puzzlePosX += widthPieceSize;
+			}
+			puzzlePosY += heightPieceSize;
+			puzzlePosX = puzzleAnchorX;
 		}
-		puzzlePosY += heightPieceSize;
-		puzzlePosX = puzzleAnchorX;
+	}
+	else if (puzzleType == PuzzleType::SLIDING)
+	{
+		puzzleCurrentDissected.clear();
+		puzzleCurrentSlideSpot.clear();
+
+		QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
+
+		puzzleCurrentWholeImg = puzzleImg;
+
+		int puzzleAnchorX = 0;
+		int puzzleAnchorY = 0;
+		int puzzlePosX = puzzleAnchorX;
+		int puzzlePosY = puzzleAnchorY;
+		int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
+		int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
+		for (int col = 0; col < puzzlePiecesMultiplier; col++)
+		{
+			for (int row = 0; row < puzzlePiecesMultiplier; row++)
+			{
+				if (col == puzzlePiecesMultiplier - 1 && row == puzzlePiecesMultiplier - 1)
+				{
+					puzzleCurrentSlideSpot.emplace_back
+					(
+						puzzlePiece
+						{
+							QPoint(col, row),
+							QPoint(col, row),
+							QPointF(puzzlePosX, puzzlePosY),
+							widthPieceSize,
+							heightPieceSize
+						}
+					);
+
+					puzzleCurrentSlideSpot.back().item.get()->setPixmap
+					(
+						invisibleImg.scaled(widthPieceSize, heightPieceSize)
+					);
+					puzzleCurrentSlideSpot.back().item.get()->setPos
+					(
+						puzzleCurrentSlideSpot.back().originalPos
+					);
+					puzzleCurrentSlideSpot.back().item.get()->setZValue(puzzlePieceZ);
+				}
+				else
+				{
+					puzzleCurrentDissected.emplace_back
+					(
+						puzzlePiece
+						{
+							QPoint(row, col),
+							QPoint(row, col),
+							QPointF(puzzlePosX, puzzlePosY),
+							widthPieceSize,
+							heightPieceSize
+						}
+					);
+
+					puzzleCurrentDissected.back().item.get()->setPixmap
+					(
+						puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
+					);
+					puzzleCurrentDissected.back().item.get()->setPos
+					(
+						puzzleCurrentDissected.back().originalPos
+					);
+					puzzleCurrentDissected.back().item.get()->setZValue(puzzlePieceZ);
+				}
+
+				puzzlePosX += widthPieceSize;
+			}
+			puzzlePosY += heightPieceSize;
+			puzzlePosX = puzzleAnchorX;
+		}
+
+		while (puzzleSolved())
+		{
+			// We multiply simulated moves by pieces multiplier to ensure that as puzzle size shrinks/expands
+			// based on settings, simulated moves is roughly the same proportionally
+			int totalSimulatedMoves = 50 * puzzlePiecesMultiplier;
+
+			for (int i = 0; i < totalSimulatedMoves; i++)
+			{
+				std::random_device rd;
+				std::mt19937 mt(rd());
+				std::uniform_int_distribution<int> dist(1, 4);
+				int dirToMove = dist(mt);
+
+				switch (dirToMove)
+				{
+				case 1:
+					if (puzzleCurrentSlideSpot[0].gridPoint.x() + 1 <= puzzlePiecesMultiplier - 1)
+						doSimulatedSlide(SlideDir::RIGHT);
+					break;
+				case 2:
+					if (puzzleCurrentSlideSpot[0].gridPoint.x() - 1 >= 0)
+						doSimulatedSlide(SlideDir::LEFT);
+					break;
+				case 3:
+					if (puzzleCurrentSlideSpot[0].gridPoint.y() + 1 <= puzzlePiecesMultiplier - 1)
+						doSimulatedSlide(SlideDir::DOWN);
+					break;
+				case 4:
+					if (puzzleCurrentSlideSpot[0].gridPoint.y() - 1 >= 0)
+						doSimulatedSlide(SlideDir::UP);
+					break;
+				}
+			}
+
+			while (puzzleCurrentSlideSpot[0].gridPoint != puzzleCurrentSlideSpot[0].originalGridPoint)
+			{
+				if (puzzleCurrentSlideSpot[0].gridPoint.x() != puzzleCurrentSlideSpot[0].originalGridPoint.x())
+				{
+					doSimulatedSlide(SlideDir::RIGHT);
+				}
+				else if (puzzleCurrentSlideSpot[0].gridPoint.y() != puzzleCurrentSlideSpot[0].originalGridPoint.y())
+				{
+					doSimulatedSlide(SlideDir::DOWN);
+				}
+			}
+		}
 	}
 
 	qDebug("Puzzle setup complete.");
@@ -306,28 +487,147 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 void PuzzleDisplayScene::addCurrentPuzzleToScene()
 {
-	puzzlePieceCoordsForShuffle.clear();
-	for (const auto& piece : puzzleCurrentDissected)
+	if (puzzleType == PuzzleType::REARRANGEMENT)
 	{
-		puzzlePieceCoordsForShuffle.emplace_back(QPointF(piece.originalPos));
-	}
-	int seed = std::chrono::system_clock::now().time_since_epoch().count();
-	shuffle(puzzlePieceCoordsForShuffle.begin(), puzzlePieceCoordsForShuffle.end(), std::default_random_engine(seed));
+		puzzlePieceCoordsForShuffle.clear();
+		for (const auto& piece : puzzleCurrentDissected)
+		{
+			puzzlePieceCoordsForShuffle.emplace_back(QPointF(piece.originalPos));
+		}
 
-	for (int i = 0; i < puzzleCurrentDissected.size(); i++)
-	{
-		puzzleCurrentDissected[i].item.get()->setZValue(puzzlePieceZ);
-		puzzleCurrentDissected[i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
-		this->addItem(puzzleCurrentDissected[i].item.get());
+		while (shuffleMadePuzzleSolved())
+		{
+			qDebug("Shuffling");
+			int seed = std::chrono::system_clock::now().time_since_epoch().count();
+			shuffle(puzzlePieceCoordsForShuffle.begin(), puzzlePieceCoordsForShuffle.end(), std::default_random_engine(seed));
+		}
+
+		for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+		{
+			puzzleCurrentDissected[i].item.get()->setZValue(puzzlePieceZ);
+			puzzleCurrentDissected[i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
+			this->addItem(puzzleCurrentDissected[i].item.get());
+		}
+		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
 	}
-	puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
+	else if (puzzleType == PuzzleType::SLIDING)
+	{
+		this->addItem(puzzleCurrentSlideSpot[0].item.get());
+
+		for (auto& piece : puzzleCurrentDissected)
+		{
+			this->addItem(piece.item.get());
+		}
+
+		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
+	}
 }
 
 void PuzzleDisplayScene::removeCurrentPuzzleFromScene()
 {
-	for (const auto& piece : puzzleCurrentDissected)
+	if (puzzleType == PuzzleType::REARRANGEMENT)
 	{
-		this->removeItem(piece.item.get());
+		for (const auto& piece : puzzleCurrentDissected)
+		{
+			this->removeItem(piece.item.get());
+		}
+	}
+	else if (puzzleType == PuzzleType::SLIDING)
+	{
+		for (const auto& piece : puzzleCurrentDissected)
+		{
+			this->removeItem(piece.item.get());
+		}
+		this->removeItem(puzzleCurrentSlideSpot[0].item.get());
+	}
+}
+
+void PuzzleDisplayScene::swapPuzzlePieceLocation(puzzlePiece &piece1, puzzlePiece &piece2)
+{
+	QPointF posPiece1 = piece1.item.get()->pos();
+	QPoint gridPointPiece1 = piece1.gridPoint;
+
+	QPointF posPiece2 = piece2.item.get()->pos();
+	QPoint gridPointPiece2 = piece2.gridPoint;
+
+	piece1.item.get()->setPos(posPiece2);
+	piece1.gridPoint = gridPointPiece2;
+
+	piece2.item.get()->setPos(posPiece1);
+	piece2.gridPoint = gridPointPiece1;
+}
+
+bool PuzzleDisplayScene::adjacentToSlideSpot(const int i)
+{
+	if (
+		(puzzleCurrentDissected[i].gridPoint.x() == puzzleCurrentSlideSpot[0].gridPoint.x()
+			&& (puzzleCurrentDissected[i].gridPoint.y() + 1 == puzzleCurrentSlideSpot[0].gridPoint.y() ||
+				puzzleCurrentDissected[i].gridPoint.y() - 1 == puzzleCurrentSlideSpot[0].gridPoint.y()))
+		||
+		(puzzleCurrentDissected[i].gridPoint.y() == puzzleCurrentSlideSpot[0].gridPoint.y()
+			&& (puzzleCurrentDissected[i].gridPoint.x() + 1 == puzzleCurrentSlideSpot[0].gridPoint.x() ||
+				puzzleCurrentDissected[i].gridPoint.x() - 1 == puzzleCurrentSlideSpot[0].gridPoint.x()))
+		)
+	{
+		return true;
+	}
+	return false;
+}
+
+void PuzzleDisplayScene::doSimulatedSlide(const SlideDir &slideDir)
+{
+	qDebug("Simulating move...");
+
+	switch (slideDir)
+	{
+	case SlideDir::RIGHT:
+		for (auto& piece : puzzleCurrentDissected)
+		{
+			if (puzzleCurrentSlideSpot[0].gridPoint.y() == piece.gridPoint.y()
+				&& puzzleCurrentSlideSpot[0].gridPoint.x() + 1 == piece.gridPoint.x())
+			{
+				qDebug("Moving right...");
+				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+				break;
+			}
+		}
+		break;
+	case SlideDir::LEFT:
+		for (auto& piece : puzzleCurrentDissected)
+		{
+			if (puzzleCurrentSlideSpot[0].gridPoint.y() == piece.gridPoint.y()
+				&& puzzleCurrentSlideSpot[0].gridPoint.x() - 1 == piece.gridPoint.x())
+			{
+				qDebug("Moving left...");
+				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+				break;
+			}
+		}
+		break;
+	case SlideDir::DOWN:
+		for (auto& piece : puzzleCurrentDissected)
+		{
+			if (puzzleCurrentSlideSpot[0].gridPoint.x() == piece.gridPoint.x()
+				&& puzzleCurrentSlideSpot[0].gridPoint.y() + 1 == piece.gridPoint.y())
+			{
+				qDebug("Moving down...");
+				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+				break;
+			}
+		}
+		break;
+	case SlideDir::UP:
+		for (auto& piece : puzzleCurrentDissected)
+		{
+			if (puzzleCurrentSlideSpot[0].gridPoint.x() == piece.gridPoint.x()
+				&& puzzleCurrentSlideSpot[0].gridPoint.y() - 1 == piece.gridPoint.y())
+			{
+				qDebug("Moving up...");
+				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+				break;
+			}
+		}
+		break;
 	}
 }
 

@@ -55,9 +55,8 @@ private:
 	enum class GameState { INVALID, SOLVING, PUZZLE_COMPLETE, TOTAL_VICTORY };
 	GameState gameState = GameState::SOLVING;
 
-	enum class SwapState { NONE, CHOOSING };
-	SwapState swapState = SwapState::NONE;
-	int selectedI = -1;
+	enum class PuzzleType { REARRANGEMENT, SLIDING };
+	PuzzleType puzzleType = PuzzleType::REARRANGEMENT;
 
 	// Determines how many pieces puzzles get broken up into.
 	// Ex: 4 would be used as 4*4 = 16 pieces, 5 would be 5*5 = 25 pieces, etc.
@@ -67,16 +66,15 @@ private:
 
 	struct puzzlePiece
 	{
-		const QPoint gridPoint;
+		QPoint gridPoint; // "Sliding" Puzzle
+		const QPointF originalGridPoint; // "Sliding" Puzzle
 		const QPointF originalPos;
 		const int width;
 		const int height;
-		enum class SelectionState { UNSELECTED, SELECTED };
-		SelectionState selectionState = SelectionState::UNSELECTED;
+		enum class SelectionState { UNSELECTED, SELECTED }; // "Rearrangement" Puzzle
+		SelectionState selectionState = SelectionState::UNSELECTED; // "Rearrangement" Puzzle
 		std::unique_ptr<QGraphicsPixmapItem> item = std::make_unique<QGraphicsPixmapItem>(nullptr);
 	};
-
-	std::vector<QPointF> puzzlePieceCoordsForShuffle;
 
 	int puzzleCurrent = 0;
 	QPixmap puzzleCurrentWholeImg;
@@ -84,14 +82,31 @@ private:
 	std::vector<puzzlePiece> puzzleCurrentDissected;
 	std::vector<QString> puzzlesList;
 
+	// "Rearrangement" Puzzle: 
+	// These parts are only used by the aforementioned type of puzzle.
+	enum class SwapState { NONE, CHOOSING };
+	SwapState swapState = SwapState::NONE;
+	int selectedI = -1;
+	std::vector<QPointF> puzzlePieceCoordsForShuffle;
+
+	// "Sliding" Puzzle:
+	// These parts are only used by the aforementioned type of puzzle.
+	enum class SlideDir { UP, DOWN, LEFT, RIGHT };
+	std::vector<puzzlePiece> puzzleCurrentSlideSpot;
+	const QPixmap invisibleImg = QPixmap(":/SlidingPuzzle/Resources/invisible.png");
+
 	void prefLoad();
 	void dirIteratorLoadPuzzles(const QString &dirPath);
 	void shufflePuzzlesList();
+	bool shuffleMadePuzzleSolved();
 	bool puzzleSolved();
 	void startSplashTransition();
 	void setUpCurrentPuzzle();
 	void addCurrentPuzzleToScene();
 	void removeCurrentPuzzleFromScene();
+	void swapPuzzlePieceLocation(puzzlePiece &piece1, puzzlePiece &piece2);
+	bool adjacentToSlideSpot(const int i); // "Sliding" Puzzle
+	void doSimulatedSlide(const SlideDir &slideDir); // "Sliding" Puzzle
 	QString extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom);
 
 signals:
