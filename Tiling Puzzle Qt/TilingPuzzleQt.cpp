@@ -126,6 +126,8 @@ TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
 
 void TilingPuzzleQt::enterFullscreen()
 {
+	uiGroup.get()->setVisible(false);
+
 	configBtnPuzzlePath.get()->setVisible(false);
 	configBtnPuzzleType.get()->setVisible(false);
 	configBtnPuzzleMultiplier.get()->setVisible(false);
@@ -148,6 +150,8 @@ void TilingPuzzleQt::enterFullscreen()
 
 void TilingPuzzleQt::exitFullscreen()
 {
+	uiGroup.get()->setVisible(true);
+
 	configBtnPuzzlePath.get()->setVisible(true);
 	configBtnPuzzleType.get()->setVisible(true);
 	configBtnPuzzleMultiplier.get()->setVisible(true);

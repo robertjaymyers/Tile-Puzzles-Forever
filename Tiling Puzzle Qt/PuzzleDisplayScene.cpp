@@ -121,6 +121,20 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 {
 	qDebug() << "Doing manual quality scaling...";
 
+	float centerOnX;
+	float centerOnY;
+
+	{
+		QPixmap temp = puzzleCurrentWholeImgOriginal;
+		puzzleCurrentWholeImg = temp.scaled(this->width(), this->height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		
+		centerOnX = (this->width() - puzzleCurrentWholeImg.width()) / 2;
+		centerOnY = (this->height() - puzzleCurrentWholeImg.height()) / 2;
+
+		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
+		puzzleCurrentWholeItem.get()->setPos(QPointF(centerOnX, centerOnY));
+	}
+
 	for (auto& piece : puzzleCurrentDissected)
 	{
 		QPixmap temp = piece.originalImg;
@@ -128,15 +142,12 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 		piece.item.get()->setPixmap(piece.img);
 		piece.item.get()->setPos
 		(
-			QPointF((piece.gridPoint.x() * piece.img.width()), (piece.gridPoint.y() * piece.img.height()))
+			QPointF
+			(
+				(piece.gridPoint.x() * piece.img.width()) + centerOnX, 
+				(piece.gridPoint.y() * piece.img.height()) + centerOnY
+			)
 		);
-	}
-
-	{
-		QPixmap temp = puzzleCurrentWholeImgOriginal;
-		puzzleCurrentWholeImg = temp.scaled(this->width(), this->height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
-		puzzleCurrentWholeItem.get()->setPos(QPointF(0, 0));
 	}
 
 	for (auto& piece : puzzleCurrentSlideSpot)
@@ -146,7 +157,11 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 		piece.item.get()->setPixmap(piece.img);
 		piece.item.get()->setPos
 		(
-			QPointF((piece.gridPoint.x() * piece.img.width()), (piece.gridPoint.y() * piece.img.height()))
+			QPointF
+			(
+				(piece.gridPoint.x() * piece.img.width()) + centerOnX,
+				(piece.gridPoint.y() * piece.img.height()) + centerOnY
+			)
 		);
 	}
 }
