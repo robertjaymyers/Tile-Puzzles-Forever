@@ -23,6 +23,7 @@ This file is part of Tile Puzzles Forever.
 #include <QPushButton>
 #include <QComboBox>
 #include <QFileDialog>
+#include <QShortcut>
 
 class TilingPuzzleQt : public QMainWindow
 {
@@ -33,6 +34,11 @@ public:
 
 private:
     Ui::TilingPuzzleQtClass ui;
+
+	std::unique_ptr<QShortcut> shortcutFullscreenExit = std::make_unique<QShortcut>(QKeySequence(tr("ESC", "Exit Fullscreen")), this);
+	enum class PreFullscreenWindowState { NORMAL, MAXIMIZED };
+	PreFullscreenWindowState preFullscreenWindowState = PreFullscreenWindowState::NORMAL;
+	bool preFullscreenVisibilityStateForBtnApplyChanges = false;
 
 	// Note: This has no relationship with the directory path in the scene.
 	// It's only used to store what directory the UI btn last opened from, for convenience.
@@ -49,4 +55,9 @@ private:
 	std::unique_ptr<QComboBox> configBtnPuzzleMultiplier = std::make_unique<QComboBox>();
 
 	std::unique_ptr<QPushButton> configBtnApplyChanges = std::make_unique<QPushButton>();
+
+	std::unique_ptr<QPushButton> configBtnHideUi = std::make_unique<QPushButton>();
+
+	void enterFullscreen();
+	void exitFullscreen();
 };

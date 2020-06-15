@@ -24,7 +24,7 @@ TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
 	setStyleSheet("QMainWindow, QGraphicsView, QGroupBox { background: #FFFFFF; border: none; }");
 
 	ui.centralWidget->setLayout(layout.get());
-	layout.get()->setMargin(10);
+	layout.get()->setMargin(0);
 	layout.get()->addWidget(puzzleDisplay.get(), 0, 0);
 	puzzleDisplay.get()->show();
 
@@ -62,11 +62,17 @@ TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
 	configBtnApplyChanges.get()->setMaximumWidth(200);
 	configBtnApplyChanges.get()->setVisible(false);
 
+	configBtnHideUi.get()->setText("Fullscreen | [ESC] to Exit");
+	configBtnHideUi.get()->setFocusPolicy(Qt::NoFocus);
+	configBtnHideUi.get()->setMaximumWidth(200);
+	configBtnHideUi.get()->setVisible(true);
+
 	uiLayout.get()->setAlignment(Qt::AlignLeft);
 	uiLayout.get()->addWidget(configBtnPuzzlePath.get(), 0);
 	uiLayout.get()->addWidget(configBtnPuzzleType.get(), 1);
 	uiLayout.get()->addWidget(configBtnPuzzleMultiplier.get(), 2);
 	uiLayout.get()->addWidget(configBtnApplyChanges.get(), 3);
+	uiLayout.get()->addWidget(configBtnHideUi.get(), 4);
 
 	connect(configBtnPuzzlePath.get(), &QPushButton::clicked, this, [=]() {
 		QString dir = QFileDialog::getExistingDirectory(this, tr("Choose Images Folder"), uiPuzzlePathLastOpened, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
@@ -98,4 +104,60 @@ TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
 		puzzleDisplay.get()->scene.get()->setPuzzleApplyChanges();
 		configBtnApplyChanges.get()->setVisible(false);
 	});
+
+	connect(configBtnHideUi.get(), &QPushButton::clicked, this, [=]() {
+		if (this->isFullScreen())
+		{
+			exitFullscreen();
+		}
+		else
+		{
+			enterFullscreen();
+		}
+	});
+
+	connect(this->shortcutFullscreenExit.get(), &QShortcut::activated, this, [=]() {
+		if (this->isFullScreen())
+		{
+			exitFullscreen();
+		}
+	});
+}
+
+void TilingPuzzleQt::enterFullscreen()
+{
+	configBtnPuzzlePath.get()->setVisible(false);
+	configBtnPuzzleType.get()->setVisible(false);
+	configBtnPuzzleMultiplier.get()->setVisible(false);
+
+	if (configBtnApplyChanges.get()->isVisible())
+	{
+		preFullscreenVisibilityStateForBtnApplyChanges = true;
+		configBtnApplyChanges.get()->setVisible(false);
+	}
+	else
+		preFullscreenVisibilityStateForBtnApplyChanges = false;
+
+	configBtnHideUi.get()->setVisible(false);
+	if (windowState() == Qt::WindowMaximized)
+		preFullscreenWindowState = PreFullscreenWindowState::MAXIMIZED;
+	else
+		preFullscreenWindowState = PreFullscreenWindowState::NORMAL;
+	this->showFullScreen();
+}
+
+void TilingPuzzleQt::exitFullscreen()
+{
+	configBtnPuzzlePath.get()->setVisible(true);
+	configBtnPuzzleType.get()->setVisible(true);
+	configBtnPuzzleMultiplier.get()->setVisible(true);
+
+	if (preFullscreenVisibilityStateForBtnApplyChanges)
+		configBtnApplyChanges.get()->setVisible(true);
+
+	configBtnHideUi.get()->setVisible(true);
+	if (preFullscreenWindowState == PreFullscreenWindowState::MAXIMIZED)
+		this->showMaximized();
+	else if (preFullscreenWindowState == PreFullscreenWindowState::NORMAL)
+		this->showNormal();
 }
