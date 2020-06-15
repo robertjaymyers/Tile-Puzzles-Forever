@@ -18,6 +18,11 @@ This file is part of Tile Puzzles Forever.
 #include "ui_TilingPuzzleQt.h"
 #include "PuzzleDisplay.h"
 #include <QGridLayout>
+#include <QHBoxLayout>
+#include <QGroupBox>
+#include <QPushButton>
+#include <QComboBox>
+#include <QFileDialog>
 
 class TilingPuzzleQt : public QMainWindow
 {
@@ -29,6 +34,19 @@ public:
 private:
     Ui::TilingPuzzleQtClass ui;
 
+	// Note: This has no relationship with the directory path in the scene.
+	// It's only used to store what directory the UI btn last opened from, for convenience.
+	QString uiPuzzlePathLastOpened = QCoreApplication::applicationDirPath();
+
 	std::unique_ptr<PuzzleDisplay> puzzleDisplay = std::make_unique<PuzzleDisplay>(this);
 	std::unique_ptr<QGridLayout> layout = std::make_unique<QGridLayout>();
+
+	std::unique_ptr<QGroupBox> uiGroup = std::make_unique<QGroupBox>();
+	std::unique_ptr<QHBoxLayout> uiLayout = std::make_unique<QHBoxLayout>();
+
+	std::unique_ptr<QPushButton> configBtnPuzzlePath = std::make_unique<QPushButton>();
+	std::unique_ptr<QComboBox> configBtnPuzzleType = std::make_unique<QComboBox>();
+	std::unique_ptr<QComboBox> configBtnPuzzleMultiplier = std::make_unique<QComboBox>();
+
+	std::unique_ptr<QPushButton> configBtnApplyChanges = std::make_unique<QPushButton>();
 };

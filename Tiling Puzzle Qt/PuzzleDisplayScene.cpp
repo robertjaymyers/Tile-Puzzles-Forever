@@ -47,6 +47,110 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 		gameState = GameState::INVALID;
 }
 
+void PuzzleDisplayScene::setPuzzleListLoadNew(const QString &folderPath)
+{
+	tempPuzzleLoadPath = folderPath;
+}
+
+void PuzzleDisplayScene::setPuzzleType(const QString &typeAsStr)
+{
+	tempPuzzleType = typeAsStr;
+}
+
+void PuzzleDisplayScene::setPuzzleMultipler(const QString &multiplierAsStr)
+{
+	tempPuzzleMultiplier = multiplierAsStr;
+}
+
+void PuzzleDisplayScene::setPuzzleApplyChanges()
+{
+	puzzleCurrentWholeItem.get()->show();
+	removeCurrentPuzzleFromScene();
+
+	if (!tempPuzzleType.isEmpty())
+	{
+		QString extracted = extractSubstringInbetweenQt("Puzzle Type: ", "", tempPuzzleType);
+
+		qDebug() << extracted;
+
+		if (extracted == "Rearrangement")
+			puzzleType = PuzzleType::REARRANGEMENT;
+		else if (extracted == "Sliding")
+			puzzleType = PuzzleType::SLIDING;
+	}
+	if (!tempPuzzleMultiplier.isEmpty())
+	{
+		puzzlePiecesMultiplier = sqrt(extractSubstringInbetweenQt("Puzzle Pieces: ", "", tempPuzzleMultiplier).toInt());
+	}
+
+	auto finishPuzzleSetup = [=]() {
+		setUpCurrentPuzzle();
+		puzzleCurrentWholeItem.get()->hide();
+		addCurrentPuzzleToScene();
+		splashPuzzleComplete.get()->hide();
+		splashTotalVictory.get()->hide();
+		emit puzzleChanged();
+		gameState = GameState::SOLVING;
+	};
+
+	if (!tempPuzzleLoadPath.isEmpty())
+	{
+		puzzleLoadPath = tempPuzzleLoadPath;
+
+		dirIteratorLoadPuzzles(puzzleLoadPath);
+
+		if (puzzlesList.size() > 0)
+		{
+			shufflePuzzlesList();
+			finishPuzzleSetup();
+		}
+		else
+			gameState = GameState::INVALID;
+	}
+	else
+	{
+		finishPuzzleSetup();
+	}
+
+	tempPuzzleLoadPath.clear();
+	tempPuzzleType.clear();
+	tempPuzzleMultiplier.clear();
+}
+
+void PuzzleDisplayScene::resizeScaleSmooth()
+{
+	qDebug() << "Doing manual quality scaling...";
+
+	for (auto& piece : puzzleCurrentDissected)
+	{
+		QPixmap temp = piece.originalImg;
+		piece.img = temp.scaled(this->width() / puzzlePiecesMultiplier, this->height() / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		piece.item.get()->setPixmap(piece.img);
+		piece.item.get()->setPos
+		(
+			QPointF((piece.gridPoint.x() * piece.img.width()), (piece.gridPoint.y() * piece.img.height()))
+		);
+	}
+
+	{
+		QPixmap temp = puzzleCurrentWholeImgOriginal;
+		puzzleCurrentWholeImg = temp.scaled(this->width(), this->height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
+		puzzleCurrentWholeItem.get()->setPos(QPointF(0, 0));
+	}
+
+	for (auto& piece : puzzleCurrentSlideSpot)
+	{
+		QPixmap temp = piece.originalImg;
+		piece.img = temp.scaled(this->width() / puzzlePiecesMultiplier, this->height() / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		piece.item.get()->setPixmap(piece.img);
+		piece.item.get()->setPos
+		(
+			QPointF((piece.gridPoint.x() * piece.img.width()), (piece.gridPoint.y() * piece.img.height()))
+		);
+	}
+}
+
 void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 	if (gameState == GameState::SOLVING)
@@ -235,6 +339,8 @@ void PuzzleDisplayScene::prefLoad()
 
 void PuzzleDisplayScene::dirIteratorLoadPuzzles(const QString &dirPath)
 {
+	puzzlesList.clear();
+
 	qDebug() << dirPath;
 	QDirIterator dirIt(dirPath, QDir::AllEntries | QDir::NoDotAndDotDot);
 	while (dirIt.hasNext())
@@ -249,6 +355,8 @@ void PuzzleDisplayScene::dirIteratorLoadPuzzles(const QString &dirPath)
 
 		qDebug() << "Loaded " + QString::number(puzzlesList.size()) + " puzzles.";
 	}
+
+	puzzleCurrent = 0;
 }
 
 void PuzzleDisplayScene::shufflePuzzlesList()
@@ -261,7 +369,7 @@ bool PuzzleDisplayScene::shuffleMadePuzzleSolved()
 {
 	for (int i = 0; i < puzzleCurrentDissected.size(); i++)
 	{
-		if (puzzleCurrentDissected[i].originalPos != puzzlePieceCoordsForShuffle[i])
+		if (puzzleCurrentDissected[i].originalGridPoint != puzzlePieceCoordsForShuffle[i].gridPoint)
 		{
 			return false;
 		}
@@ -273,7 +381,7 @@ bool PuzzleDisplayScene::puzzleSolved()
 {
 	for (const auto& piece : puzzleCurrentDissected)
 	{
-		if (piece.item.get()->pos() != piece.originalPos)
+		if (piece.gridPoint != piece.originalGridPoint)
 		{
 			return false;
 		}
@@ -327,6 +435,7 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 		QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
 
+		puzzleCurrentWholeImgOriginal = puzzleImg;
 		puzzleCurrentWholeImg = puzzleImg;
 
 		int puzzleAnchorX = 0;
@@ -343,6 +452,8 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 				(
 					puzzlePiece
 					{
+						puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)),
+						puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)),
 						QPoint(row, col),
 						QPoint(row, col),
 						QPointF(puzzlePosX, puzzlePosY),
@@ -352,7 +463,7 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 				);
 				puzzleCurrentDissected.back().item.get()->setPixmap
 				(
-					puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
+					puzzleCurrentDissected.back().originalImg
 				);
 				puzzlePosX += widthPieceSize;
 			}
@@ -367,6 +478,7 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 		QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
 
+		puzzleCurrentWholeImgOriginal = puzzleImg;
 		puzzleCurrentWholeImg = puzzleImg;
 
 		int puzzleAnchorX = 0;
@@ -385,6 +497,8 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 					(
 						puzzlePiece
 						{
+							invisibleImg.scaled(widthPieceSize, heightPieceSize),
+							invisibleImg.scaled(widthPieceSize, heightPieceSize),
 							QPoint(col, row),
 							QPoint(col, row),
 							QPointF(puzzlePosX, puzzlePosY),
@@ -395,7 +509,7 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 					puzzleCurrentSlideSpot.back().item.get()->setPixmap
 					(
-						invisibleImg.scaled(widthPieceSize, heightPieceSize)
+						puzzleCurrentSlideSpot.back().originalImg
 					);
 					puzzleCurrentSlideSpot.back().item.get()->setPos
 					(
@@ -409,6 +523,8 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 					(
 						puzzlePiece
 						{
+							puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)),
+							puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)),
 							QPoint(row, col),
 							QPoint(row, col),
 							QPointF(puzzlePosX, puzzlePosY),
@@ -419,7 +535,7 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 					puzzleCurrentDissected.back().item.get()->setPixmap
 					(
-						puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, widthPieceSize, heightPieceSize)) // x, y, w, h
+						puzzleCurrentDissected.back().originalImg
 					);
 					puzzleCurrentDissected.back().item.get()->setPos
 					(
@@ -492,7 +608,7 @@ void PuzzleDisplayScene::addCurrentPuzzleToScene()
 		puzzlePieceCoordsForShuffle.clear();
 		for (const auto& piece : puzzleCurrentDissected)
 		{
-			puzzlePieceCoordsForShuffle.emplace_back(QPointF(piece.originalPos));
+			puzzlePieceCoordsForShuffle.emplace_back(shuffleCoord{piece.originalPos, piece.originalGridPoint});
 		}
 
 		while (shuffleMadePuzzleSolved())
@@ -505,7 +621,8 @@ void PuzzleDisplayScene::addCurrentPuzzleToScene()
 		for (int i = 0; i < puzzleCurrentDissected.size(); i++)
 		{
 			puzzleCurrentDissected[i].item.get()->setZValue(puzzlePieceZ);
-			puzzleCurrentDissected[i].item.get()->setPos(puzzlePieceCoordsForShuffle[i]);
+			puzzleCurrentDissected[i].gridPoint = puzzlePieceCoordsForShuffle[i].gridPoint;
+			puzzleCurrentDissected[i].item.get()->setPos(puzzlePieceCoordsForShuffle[i].pos);
 			this->addItem(puzzleCurrentDissected[i].item.get());
 		}
 		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
@@ -547,8 +664,14 @@ void PuzzleDisplayScene::swapPuzzlePieceLocation(puzzlePiece &piece1, puzzlePiec
 	QPointF posPiece1 = piece1.item.get()->pos();
 	QPoint gridPointPiece1 = piece1.gridPoint;
 
+	qDebug() << "posPiece1: " << posPiece1;
+	qDebug() << "gridPointPiece1: " << gridPointPiece1;
+
 	QPointF posPiece2 = piece2.item.get()->pos();
 	QPoint gridPointPiece2 = piece2.gridPoint;
+
+	qDebug() << "posPiece2: " << posPiece2;
+	qDebug() << "gridPointPiece2: " << gridPointPiece2;
 
 	piece1.item.get()->setPos(posPiece2);
 	piece1.gridPoint = gridPointPiece2;

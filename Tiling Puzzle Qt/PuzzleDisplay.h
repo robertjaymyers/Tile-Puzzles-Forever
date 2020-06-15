@@ -25,12 +25,11 @@ class PuzzleDisplay : public QGraphicsView
 
 public:
 	PuzzleDisplay(QWidget *parent = nullptr);
+	std::unique_ptr<PuzzleDisplayScene> scene = std::make_unique<PuzzleDisplayScene>(this);
 
 protected:
 	void resizeEvent(QResizeEvent *event);
 
 private:
-	std::unique_ptr<PuzzleDisplayScene> scene = std::make_unique<PuzzleDisplayScene>(this);
-
 	void resizeForPuzzleChange();
 };

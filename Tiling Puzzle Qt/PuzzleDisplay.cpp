@@ -17,7 +17,7 @@ This file is part of Tile Puzzles Forever.
 PuzzleDisplay::PuzzleDisplay(QWidget *parent)
 	: QGraphicsView(parent)
 {
-	setStyleSheet("background: #FFFFFF; border: none;");
+	setRenderHint(QPainter::SmoothPixmapTransform);
 
 	//scene.get()->setParent(this->parent());
 	setScene(scene.get());
@@ -42,13 +42,12 @@ PuzzleDisplay::PuzzleDisplay(QWidget *parent)
 
 void PuzzleDisplay::resizeEvent(QResizeEvent *event)
 {
-	fitInView(scene.get()->itemsBoundingRect(), Qt::KeepAspectRatio);
-	centerOn(scene.get()->itemsBoundingRect().center());
+	scene.get()->setSceneRect(this->rect());
+	scene.get()->resizeScaleSmooth();
 }
 
 void PuzzleDisplay::resizeForPuzzleChange()
 {
-	fitInView(scene.get()->itemsBoundingRect(), Qt::KeepAspectRatio);
-	centerOn(scene.get()->itemsBoundingRect().center());
-	scene.get()->setSceneRect(scene->itemsBoundingRect());
+	scene.get()->setSceneRect(this->rect());
+	scene.get()->resizeScaleSmooth();
 }

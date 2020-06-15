@@ -33,6 +33,11 @@ class PuzzleDisplayScene : public QGraphicsScene
 
 public:
 	PuzzleDisplayScene(QObject *parent = nullptr);
+	void setPuzzleListLoadNew(const QString &folderPath);
+	void setPuzzleType(const QString &typeAsStr);
+	void setPuzzleMultipler(const QString &multiplierAsStr);
+	void setPuzzleApplyChanges();
+	void resizeScaleSmooth();
 
 protected:
 	void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
@@ -40,8 +45,6 @@ protected:
 
 private:
 	const QString appExecutablePath = QCoreApplication::applicationDirPath();
-
-	QString puzzleLoadPath = appExecutablePath + "/puzzles";
 
 	QStringList supportedImgTypes = { "BMP", "GIF", "PNG", "JPG" };
 
@@ -55,6 +58,14 @@ private:
 	enum class GameState { INVALID, SOLVING, PUZZLE_COMPLETE, TOTAL_VICTORY };
 	GameState gameState = GameState::SOLVING;
 
+	// We store UI config changes made in these variables.
+	// If changes are confirmed, these variables are used to apply any changes.
+	QString tempPuzzleLoadPath;
+	QString tempPuzzleType;
+	QString tempPuzzleMultiplier;
+
+	QString puzzleLoadPath = appExecutablePath + "/puzzles";
+
 	enum class PuzzleType { REARRANGEMENT, SLIDING };
 	PuzzleType puzzleType = PuzzleType::REARRANGEMENT;
 
@@ -66,8 +77,10 @@ private:
 
 	struct puzzlePiece
 	{
+		const QPixmap originalImg;
+		QPixmap img;
 		QPoint gridPoint; // "Sliding" Puzzle
-		const QPointF originalGridPoint; // "Sliding" Puzzle
+		const QPoint originalGridPoint; // "Sliding" Puzzle
 		const QPointF originalPos;
 		const int width;
 		const int height;
@@ -76,7 +89,8 @@ private:
 		std::unique_ptr<QGraphicsPixmapItem> item = std::make_unique<QGraphicsPixmapItem>(nullptr);
 	};
 
-	int puzzleCurrent = 0;
+	int puzzleCurrent;
+	QPixmap puzzleCurrentWholeImgOriginal;
 	QPixmap puzzleCurrentWholeImg;
 	std::unique_ptr<QGraphicsPixmapItem> puzzleCurrentWholeItem = std::make_unique<QGraphicsPixmapItem>(nullptr);
 	std::vector<puzzlePiece> puzzleCurrentDissected;
@@ -87,13 +101,14 @@ private:
 	enum class SwapState { NONE, CHOOSING };
 	SwapState swapState = SwapState::NONE;
 	int selectedI = -1;
-	std::vector<QPointF> puzzlePieceCoordsForShuffle;
+	struct shuffleCoord { QPointF pos; QPoint gridPoint; };
+	std::vector<shuffleCoord> puzzlePieceCoordsForShuffle;
 
 	// "Sliding" Puzzle:
 	// These parts are only used by the aforementioned type of puzzle.
 	enum class SlideDir { UP, DOWN, LEFT, RIGHT };
 	std::vector<puzzlePiece> puzzleCurrentSlideSpot;
-	const QPixmap invisibleImg = QPixmap(":/SlidingPuzzle/Resources/invisible.png");
+	const QPixmap invisibleImg = QPixmap(":/TilingPuzzleQt/Resources/invisible.png");
 
 	void prefLoad();
 	void dirIteratorLoadPuzzles(const QString &dirPath);
