@@ -13,6 +13,9 @@
     <ClCompile Include="PuzzleDisplayScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PuzzlePixmapItem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resource Files">
@@ -46,6 +49,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="PuzzleDisplayScene.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="PuzzlePixmapItem.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

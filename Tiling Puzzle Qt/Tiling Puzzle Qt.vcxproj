@@ -93,6 +93,7 @@
     <QtMoc Include="TilingPuzzleQt.h" />
     <ClCompile Include="PuzzleDisplay.cpp" />
     <ClCompile Include="PuzzleDisplayScene.cpp" />
+    <ClCompile Include="PuzzlePixmapItem.cpp" />
     <ClCompile Include="TilingPuzzleQt.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
@@ -104,6 +105,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="PuzzlePixmapItem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

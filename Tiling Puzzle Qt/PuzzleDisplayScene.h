@@ -13,6 +13,7 @@ This file is part of Tile Puzzles Forever.
 */
 
 #pragma once
+#include "PuzzlePixmapItem.h"
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsSceneMouseEvent>
@@ -22,6 +23,7 @@ This file is part of Tile Puzzles Forever.
 #include <QSplashScreen>
 #include <QCoreApplication>
 #include <QSound>
+#include <QPropertyAnimation>
 #include <QDebug>
 #include <random>
 #include <chrono>
@@ -86,7 +88,7 @@ private:
 		const int height;
 		enum class SelectionState { UNSELECTED, SELECTED }; // "Rearrangement" Puzzle
 		SelectionState selectionState = SelectionState::UNSELECTED; // "Rearrangement" Puzzle
-		std::unique_ptr<QGraphicsPixmapItem> item = std::make_unique<QGraphicsPixmapItem>(nullptr);
+		std::unique_ptr<PuzzlePixmapItem> item = std::make_unique<PuzzlePixmapItem>(nullptr);
 	};
 
 	int puzzleCurrent;
@@ -109,6 +111,7 @@ private:
 	enum class SlideDir { UP, DOWN, LEFT, RIGHT };
 	std::vector<puzzlePiece> puzzleCurrentSlideSpot;
 	const QPixmap invisibleImg = QPixmap(":/TilingPuzzleQt/Resources/invisible.png");
+	std::unique_ptr<QPropertyAnimation> slideAnimation = std::make_unique<QPropertyAnimation>();
 
 	void prefLoad();
 	void dirIteratorLoadPuzzles(const QString &dirPath);

@@ -236,7 +236,32 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 						if (adjacentToSlideSpot(i))
 						{
-							swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], puzzleCurrentDissected[i]);
+							// Store the pre-slide positions/points before animating, so we know where stuff should go.
+							QPointF posDissected = puzzleCurrentDissected[i].item.get()->pos();
+							QPoint gridPointDissected = puzzleCurrentDissected[i].gridPoint;
+
+							QPointF posSlide = puzzleCurrentSlideSpot[0].item.get()->pos();
+							QPoint gridPointSlide = puzzleCurrentSlideSpot[0].gridPoint;
+
+							slideAnimation.get()->setTargetObject(puzzleCurrentDissected[i].item.get());
+							slideAnimation.get()->setPropertyName("pos");
+							slideAnimation.get()->setDuration(50);
+							slideAnimation.get()->setStartValue(posDissected);
+							slideAnimation.get()->setEndValue(posSlide);
+							slideAnimation.get()->start();
+
+							// With animating done, visible tile should be in slide spot position.
+							// We still need to update slide spot's position and the grid point of both,
+							// but NOT update the position of visible tile, since that has already moved.
+							// We do a check to make sure it is in the right spot and put it there manually,
+							// in case of animation failure.
+
+							if (puzzleCurrentDissected[i].item.get()->pos() != posSlide)
+								puzzleCurrentDissected[i].item.get()->setPos(posSlide);
+							puzzleCurrentDissected[i].gridPoint = gridPointSlide;
+
+							puzzleCurrentSlideSpot[0].item.get()->setPos(posDissected);
+							puzzleCurrentSlideSpot[0].gridPoint = gridPointDissected;
 
 							if (puzzleSolved())
 							{
