@@ -68,8 +68,10 @@ private:
 
 	QString puzzleLoadPath = appExecutablePath + "/puzzles";
 
-	enum class PuzzleType { REARRANGEMENT, SLIDING };
+	enum class PuzzleType { REARRANGEMENT, SLIDING, ROTATION };
 	PuzzleType puzzleType = PuzzleType::REARRANGEMENT;
+
+	enum class PuzzleSolvedType { POSITION, ROTATION };
 
 	// Determines how many pieces puzzles get broken up into.
 	// Ex: 4 would be used as 4*4 = 16 pieces, 5 would be 5*5 = 25 pieces, etc.
@@ -84,8 +86,8 @@ private:
 		QPoint gridPoint; // "Sliding" Puzzle
 		const QPoint originalGridPoint; // "Sliding" Puzzle
 		const QPointF originalPos;
-		const int width;
-		const int height;
+		const double width;
+		const double height;
 		enum class SelectionState { UNSELECTED, SELECTED }; // "Rearrangement" Puzzle
 		SelectionState selectionState = SelectionState::UNSELECTED; // "Rearrangement" Puzzle
 		std::unique_ptr<PuzzlePixmapItem> item = std::make_unique<PuzzlePixmapItem>(nullptr);
@@ -98,6 +100,9 @@ private:
 	std::vector<puzzlePiece> puzzleCurrentDissected;
 	std::vector<QString> puzzlesList;
 
+	enum class MoveDir { UP, DOWN, LEFT, RIGHT };
+	QPoint simulatedMoveGridPoint = QPoint(0, 0);
+
 	// "Rearrangement" Puzzle: 
 	// These parts are only used by the aforementioned type of puzzle.
 	enum class SwapState { NONE, CHOOSING };
@@ -108,23 +113,30 @@ private:
 
 	// "Sliding" Puzzle:
 	// These parts are only used by the aforementioned type of puzzle.
-	enum class SlideDir { UP, DOWN, LEFT, RIGHT };
 	std::vector<puzzlePiece> puzzleCurrentSlideSpot;
 	const QPixmap invisibleImg = QPixmap(":/TilingPuzzleQt/Resources/invisible.png");
 	std::unique_ptr<QPropertyAnimation> slideAnimation = std::make_unique<QPropertyAnimation>();
+
+	// "Rotation" Puzzle:
+	// These parts are only used by the aforementioned type of puzzle.
+	const int totalPossibleAdjacentRotate = 4;
+	std::vector<std::unique_ptr<QPropertyAnimation>> rotateAnimationList;
 
 	void prefLoad();
 	void dirIteratorLoadPuzzles(const QString &dirPath);
 	void shufflePuzzlesList();
 	bool shuffleMadePuzzleSolved();
-	bool puzzleSolved();
+	bool puzzleSolved(const PuzzleSolvedType &puzzleSolvedType);
 	void startSplashTransition();
 	void setUpCurrentPuzzle();
 	void addCurrentPuzzleToScene();
 	void removeCurrentPuzzleFromScene();
 	void swapPuzzlePieceLocation(puzzlePiece &piece1, puzzlePiece &piece2);
 	bool adjacentToSlideSpot(const int i); // "Sliding" Puzzle
-	void doSimulatedSlide(const SlideDir &slideDir); // "Sliding" Puzzle
+	void doSimulatedMove(const MoveDir &moveDir); // "Sliding" Puzzle
+	std::vector<int> getAdjacentToPiece(const int pieceIndex); // "Rotation" Puzzle
+	qreal getNextClockwiseRotationSimulated(const int pieceIndex); // "Rotation" Puzzle
+	qreal getNextClockwiseRotationAnimated(const int pieceIndex); // "Rotation" Puzzle
 	QString extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom);
 
 signals:

@@ -38,6 +38,7 @@ TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
 	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: "));
 	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: Rearrangement"));
 	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: Sliding"));
+	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: Rotation"));
 	configBtnPuzzleType.get()->setFocusPolicy(Qt::NoFocus);
 	configBtnPuzzleType.get()->setMaximumWidth(200);
 	configBtnPuzzleType.get()->setCurrentIndex(0);

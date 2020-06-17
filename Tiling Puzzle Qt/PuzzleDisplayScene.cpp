@@ -23,6 +23,25 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 	puzzleCurrentWholeItem.get()->hide();
 	this->addItem(puzzleCurrentWholeItem.get());
 
+	for (int i = 0; i < totalPossibleAdjacentRotate; i++)
+		rotateAnimationList.emplace_back(std::make_unique<QPropertyAnimation>());
+
+	for (const auto& ani : rotateAnimationList)
+	{
+		connect(ani.get(), &QAbstractAnimation::finished, this, [=]() {
+			for (auto& piece : puzzleCurrentDissected)
+			{
+				if (piece.item.get()->rotation() == 360)
+					piece.item.get()->setRotation(0);
+			}
+			if (puzzleSolved(PuzzleSolvedType::ROTATION))
+			{
+				qDebug("WINNER!");
+				startSplashTransition();
+			}
+		});
+	}
+
 	splashPuzzleComplete.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashPuzzleComplete.png"));
 	splashTotalVictory.get()->setPixmap(QPixmap(":/TilingPuzzleQt/Resources/splashTotalVictory.png"));
 
@@ -77,6 +96,8 @@ void PuzzleDisplayScene::setPuzzleApplyChanges()
 			puzzleType = PuzzleType::REARRANGEMENT;
 		else if (extracted == "Sliding")
 			puzzleType = PuzzleType::SLIDING;
+		else if (extracted == "Rotation")
+			puzzleType = PuzzleType::ROTATION;
 	}
 	if (!tempPuzzleMultiplier.isEmpty())
 	{
@@ -121,8 +142,8 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 {
 	qDebug() << "Doing manual quality scaling...";
 
-	float centerOnX;
-	float centerOnY;
+	double centerOnX;
+	double centerOnY;
 
 	{
 		QPixmap temp = puzzleCurrentWholeImgOriginal;
@@ -133,6 +154,8 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 
 		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
 		puzzleCurrentWholeItem.get()->setPos(QPointF(centerOnX, centerOnY));
+
+		puzzleCurrentWholeItem.get()->setTransformOriginPoint(puzzleCurrentWholeImg.width() / 2, puzzleCurrentWholeImg.height() / 2);
 	}
 
 	for (auto& piece : puzzleCurrentDissected)
@@ -148,6 +171,8 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 				(piece.gridPoint.y() * piece.img.height()) + centerOnY
 			)
 		);
+
+		piece.item.get()->setTransformOriginPoint(piece.img.width() / 2, piece.img.height() / 2);
 	}
 
 	for (auto& piece : puzzleCurrentSlideSpot)
@@ -163,6 +188,8 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 				(piece.gridPoint.y() * piece.img.height()) + centerOnY
 			)
 		);
+
+		piece.item.get()->setTransformOriginPoint(piece.img.width() / 2, piece.img.height() / 2);
 	}
 }
 
@@ -208,7 +235,7 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 								selectedI = -1;
 
-								if (puzzleSolved())
+								if (puzzleSolved(PuzzleSolvedType::POSITION))
 								{
 									qDebug("WINNER!");
 									startSplashTransition();
@@ -263,10 +290,58 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 							puzzleCurrentSlideSpot[0].item.get()->setPos(posDissected);
 							puzzleCurrentSlideSpot[0].gridPoint = gridPointDissected;
 
-							if (puzzleSolved())
+							if (puzzleSolved(PuzzleSolvedType::POSITION))
 							{
 								qDebug("WINNER!");
 								startSplashTransition();
+							}
+						}
+						return;
+					}
+				}
+			}
+			else if (puzzleType == PuzzleType::ROTATION)
+			{
+				// We only need to check if clicked on a spot adjacent to slide spot
+				// (one of a few possibilities)
+				// whichever is clicked swaps position with slide spot.
+				for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+				{
+					if (puzzleCurrentDissected[i].item.get()->contains(puzzleCurrentDissected[i].item.get()->mapFromScene(event->scenePos())))
+					{
+						qDebug() << "clicked in area";
+						qDebug() << event->scenePos();
+
+						qDebug() << puzzleCurrentDissected[i].gridPoint;
+
+						// Need to get all pieces that are adjacent to clicked piece.
+						// Then rotate them and the clicked piece.
+						std::vector<int> adjacentPieceIndices = getAdjacentToPiece(i);
+						if (adjacentPieceIndices.size() > 0)
+						{
+							slideAnimation.get()->setTargetObject(puzzleCurrentDissected[i].item.get());
+							slideAnimation.get()->setPropertyName("rotation");
+							slideAnimation.get()->setDuration(50);
+							slideAnimation.get()->setStartValue(puzzleCurrentDissected[i].item.get()->rotation());
+							slideAnimation.get()->setEndValue(getNextClockwiseRotationAnimated(i));
+							slideAnimation.get()->start();
+
+							int aniCount = 0;
+							for (const auto& index : adjacentPieceIndices)
+							{
+								rotateAnimationList[aniCount].get()->setTargetObject(puzzleCurrentDissected[index].item.get());
+								rotateAnimationList[aniCount].get()->setPropertyName("rotation");
+								rotateAnimationList[aniCount].get()->setDuration(50);
+								rotateAnimationList[aniCount].get()->setStartValue
+								(
+									puzzleCurrentDissected[index].item.get()->rotation()
+								);
+								rotateAnimationList[aniCount].get()->setEndValue
+								(
+									getNextClockwiseRotationAnimated(index)
+								);
+								rotateAnimationList[aniCount].get()->start();
+								aniCount++;
 							}
 						}
 						return;
@@ -370,6 +445,8 @@ void PuzzleDisplayScene::prefLoad()
 						puzzleType = PuzzleType::REARRANGEMENT;
 					else if (str == "SLIDING")
 						puzzleType = PuzzleType::SLIDING;
+					else if (str == "ROTATION")
+						puzzleType = PuzzleType::ROTATION;
 				}
 			}
 		}
@@ -417,16 +494,31 @@ bool PuzzleDisplayScene::shuffleMadePuzzleSolved()
 	return true;
 }
 
-bool PuzzleDisplayScene::puzzleSolved()
+bool PuzzleDisplayScene::puzzleSolved(const PuzzleSolvedType &puzzleSolvedType)
 {
-	for (const auto& piece : puzzleCurrentDissected)
+	if (puzzleSolvedType == PuzzleSolvedType::POSITION)
 	{
-		if (piece.gridPoint != piece.originalGridPoint)
+		for (const auto& piece : puzzleCurrentDissected)
 		{
-			return false;
+			if (piece.gridPoint != piece.originalGridPoint)
+			{
+				return false;
+			}
 		}
+		return true;
 	}
-	return true;
+	else if (puzzleSolvedType == PuzzleSolvedType::ROTATION)
+	{
+		for (const auto& piece : puzzleCurrentDissected)
+		{
+			if (piece.item.get()->rotation() != 0)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
 void PuzzleDisplayScene::startSplashTransition()
@@ -480,10 +572,10 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 		int puzzleAnchorX = 0;
 		int puzzleAnchorY = 0;
-		int puzzlePosX = puzzleAnchorX;
-		int puzzlePosY = puzzleAnchorY;
-		int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
-		int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
+		double puzzlePosX = puzzleAnchorX;
+		double puzzlePosY = puzzleAnchorY;
+		double widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
+		double heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
 		for (int col = 0; col < puzzlePiecesMultiplier; col++)
 		{
 			for (int row = 0; row < puzzlePiecesMultiplier; row++)
@@ -523,10 +615,10 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 
 		int puzzleAnchorX = 0;
 		int puzzleAnchorY = 0;
-		int puzzlePosX = puzzleAnchorX;
-		int puzzlePosY = puzzleAnchorY;
-		int widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
-		int heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
+		double puzzlePosX = puzzleAnchorX;
+		double puzzlePosY = puzzleAnchorY;
+		double widthPieceSize = puzzleImg.width() / puzzlePiecesMultiplier;
+		double heightPieceSize = puzzleImg.height() / puzzlePiecesMultiplier;
 		for (int col = 0; col < puzzlePiecesMultiplier; col++)
 		{
 			for (int row = 0; row < puzzlePiecesMultiplier; row++)
@@ -590,7 +682,7 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 			puzzlePosX = puzzleAnchorX;
 		}
 
-		while (puzzleSolved())
+		while (puzzleSolved(PuzzleSolvedType::POSITION))
 		{
 			// We multiply simulated moves by pieces multiplier to ensure that as puzzle size shrinks/expands
 			// based on settings, simulated moves is roughly the same proportionally
@@ -607,19 +699,19 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 				{
 				case 1:
 					if (puzzleCurrentSlideSpot[0].gridPoint.x() + 1 <= puzzlePiecesMultiplier - 1)
-						doSimulatedSlide(SlideDir::RIGHT);
+						doSimulatedMove(MoveDir::RIGHT);
 					break;
 				case 2:
 					if (puzzleCurrentSlideSpot[0].gridPoint.x() - 1 >= 0)
-						doSimulatedSlide(SlideDir::LEFT);
+						doSimulatedMove(MoveDir::LEFT);
 					break;
 				case 3:
 					if (puzzleCurrentSlideSpot[0].gridPoint.y() + 1 <= puzzlePiecesMultiplier - 1)
-						doSimulatedSlide(SlideDir::DOWN);
+						doSimulatedMove(MoveDir::DOWN);
 					break;
 				case 4:
 					if (puzzleCurrentSlideSpot[0].gridPoint.y() - 1 >= 0)
-						doSimulatedSlide(SlideDir::UP);
+						doSimulatedMove(MoveDir::UP);
 					break;
 				}
 			}
@@ -628,11 +720,131 @@ void PuzzleDisplayScene::setUpCurrentPuzzle()
 			{
 				if (puzzleCurrentSlideSpot[0].gridPoint.x() != puzzleCurrentSlideSpot[0].originalGridPoint.x())
 				{
-					doSimulatedSlide(SlideDir::RIGHT);
+					doSimulatedMove(MoveDir::RIGHT);
 				}
 				else if (puzzleCurrentSlideSpot[0].gridPoint.y() != puzzleCurrentSlideSpot[0].originalGridPoint.y())
 				{
-					doSimulatedSlide(SlideDir::DOWN);
+					doSimulatedMove(MoveDir::DOWN);
+				}
+			}
+		}
+	}
+	else if (puzzleType == PuzzleType::ROTATION)
+	{
+		puzzleCurrentDissected.clear();
+
+		QPixmap puzzleImg = QPixmap(puzzlesList[puzzleCurrent]);
+
+		// Matching size for width/height. We do this for rotation style, so that 
+		// rotated pieces fit the same no matter how they are rotated.
+		// This will crop the original image a bit in some cases. May be worth doing targeting cropping of some kind.
+		// Like cropping based on center, rather than 0, 0, origin point.
+		double standardImageDimensions;
+
+		if (puzzleImg.width() < puzzleImg.height())
+			standardImageDimensions = puzzleImg.width();
+		else if (puzzleImg.height() < puzzleImg.width())
+			standardImageDimensions = puzzleImg.height();
+		else
+			standardImageDimensions = puzzleImg.width(); // they are already the same so it doesn't matter which one we use
+
+		double standardPieceSize = standardImageDimensions / puzzlePiecesMultiplier;
+
+		puzzleCurrentWholeImgOriginal = puzzleImg.copy(QRect(0, 0, standardImageDimensions, standardImageDimensions));
+		puzzleCurrentWholeImg = puzzleCurrentWholeImgOriginal;
+
+		puzzleCurrentWholeItem.get()->setTransformOriginPoint
+		(
+			puzzleCurrentWholeImg.width() / 2, 
+			puzzleCurrentWholeImg.height() / 2
+		);
+
+		int puzzleAnchorX = 0;
+		int puzzleAnchorY = 0;
+		double puzzlePosX = puzzleAnchorX;
+		double puzzlePosY = puzzleAnchorY;
+		for (int col = 0; col < puzzlePiecesMultiplier; col++)
+		{
+			for (int row = 0; row < puzzlePiecesMultiplier; row++)
+			{
+				puzzleCurrentDissected.emplace_back
+				(
+					puzzlePiece
+					{
+						puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, standardPieceSize, standardPieceSize)),
+						puzzleImg.copy(QRect(puzzlePosX, puzzlePosY, standardPieceSize, standardPieceSize)),
+						QPoint(row, col),
+						QPoint(row, col),
+						QPointF(puzzlePosX, puzzlePosY),
+						standardPieceSize,
+						standardPieceSize
+					}
+				);
+				puzzleCurrentDissected.back().item.get()->setPixmap
+				(
+					puzzleCurrentDissected.back().originalImg
+				);
+				puzzleCurrentDissected.back().item.get()->setPos
+				(
+					puzzleCurrentDissected.back().originalPos
+				);
+				puzzleCurrentDissected.back().item.get()->setZValue(puzzlePieceZ);
+				puzzleCurrentDissected.back().item.get()->setTransformOriginPoint
+				(
+					puzzleCurrentDissected.back().originalImg.width() / 2, 
+					puzzleCurrentDissected.back().originalImg.height() / 2
+				);
+				puzzlePosX += standardPieceSize;
+			}
+			puzzlePosY += standardPieceSize;
+			puzzlePosX = puzzleAnchorX;
+		}
+
+		QPoint simulatedMoveGridPointStart = puzzleCurrentDissected.back().originalGridPoint;
+
+		while (puzzleSolved(PuzzleSolvedType::ROTATION))
+		{
+			// We multiply simulated moves by pieces multiplier to ensure that as puzzle size shrinks/expands
+			// based on settings, simulated moves is roughly the same proportionally
+			int totalSimulatedMoves = 50 * puzzlePiecesMultiplier;
+
+			for (int i = 0; i < totalSimulatedMoves; i++)
+			{
+				std::random_device rd;
+				std::mt19937 mt(rd());
+				std::uniform_int_distribution<int> dist(1, 4);
+				int dirToMove = dist(mt);
+
+				switch (dirToMove)
+				{
+				case 1:
+					if (simulatedMoveGridPoint.x() + 1 <= puzzlePiecesMultiplier - 1)
+						doSimulatedMove(MoveDir::RIGHT);
+					break;
+				case 2:
+					if (simulatedMoveGridPoint.x() - 1 >= 0)
+						doSimulatedMove(MoveDir::LEFT);
+					break;
+				case 3:
+					if (simulatedMoveGridPoint.y() + 1 <= puzzlePiecesMultiplier - 1)
+						doSimulatedMove(MoveDir::DOWN);
+					break;
+				case 4:
+					if (simulatedMoveGridPoint.y() - 1 >= 0)
+						doSimulatedMove(MoveDir::UP);
+					break;
+				}
+			}
+
+			while (simulatedMoveGridPoint != simulatedMoveGridPointStart)
+			{
+				if (simulatedMoveGridPoint.x() != simulatedMoveGridPointStart.x())
+				{
+					doSimulatedMove(MoveDir::RIGHT);
+				}
+				else if (simulatedMoveGridPoint.y() != simulatedMoveGridPointStart.y())
+				{
+					doSimulatedMove(MoveDir::DOWN);
 				}
 			}
 		}
@@ -678,11 +890,20 @@ void PuzzleDisplayScene::addCurrentPuzzleToScene()
 
 		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
 	}
+	else if (puzzleType == PuzzleType::ROTATION)
+	{
+		for (auto& piece : puzzleCurrentDissected)
+		{
+			this->addItem(piece.item.get());
+		}
+
+		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
+	}
 }
 
 void PuzzleDisplayScene::removeCurrentPuzzleFromScene()
 {
-	if (puzzleType == PuzzleType::REARRANGEMENT)
+	if (puzzleType == PuzzleType::REARRANGEMENT || puzzleType == PuzzleType::ROTATION)
 	{
 		for (const auto& piece : puzzleCurrentDissected)
 		{
@@ -737,61 +958,162 @@ bool PuzzleDisplayScene::adjacentToSlideSpot(const int i)
 	return false;
 }
 
-void PuzzleDisplayScene::doSimulatedSlide(const SlideDir &slideDir)
+void PuzzleDisplayScene::doSimulatedMove(const MoveDir &moveDir)
 {
 	qDebug("Simulating move...");
 
-	switch (slideDir)
+	if (puzzleType == PuzzleType::SLIDING)
 	{
-	case SlideDir::RIGHT:
-		for (auto& piece : puzzleCurrentDissected)
+		switch (moveDir)
 		{
-			if (puzzleCurrentSlideSpot[0].gridPoint.y() == piece.gridPoint.y()
-				&& puzzleCurrentSlideSpot[0].gridPoint.x() + 1 == piece.gridPoint.x())
+		case MoveDir::RIGHT:
+			for (auto& piece : puzzleCurrentDissected)
 			{
-				qDebug("Moving right...");
-				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
-				break;
+				if (puzzleCurrentSlideSpot[0].gridPoint.y() == piece.gridPoint.y()
+					&& puzzleCurrentSlideSpot[0].gridPoint.x() + 1 == piece.gridPoint.x())
+				{
+					qDebug("Moving right...");
+					swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+					break;
+				}
 			}
-		}
-		break;
-	case SlideDir::LEFT:
-		for (auto& piece : puzzleCurrentDissected)
-		{
-			if (puzzleCurrentSlideSpot[0].gridPoint.y() == piece.gridPoint.y()
-				&& puzzleCurrentSlideSpot[0].gridPoint.x() - 1 == piece.gridPoint.x())
+			break;
+		case MoveDir::LEFT:
+			for (auto& piece : puzzleCurrentDissected)
 			{
-				qDebug("Moving left...");
-				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
-				break;
+				if (puzzleCurrentSlideSpot[0].gridPoint.y() == piece.gridPoint.y()
+					&& puzzleCurrentSlideSpot[0].gridPoint.x() - 1 == piece.gridPoint.x())
+				{
+					qDebug("Moving left...");
+					swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+					break;
+				}
 			}
-		}
-		break;
-	case SlideDir::DOWN:
-		for (auto& piece : puzzleCurrentDissected)
-		{
-			if (puzzleCurrentSlideSpot[0].gridPoint.x() == piece.gridPoint.x()
-				&& puzzleCurrentSlideSpot[0].gridPoint.y() + 1 == piece.gridPoint.y())
+			break;
+		case MoveDir::DOWN:
+			for (auto& piece : puzzleCurrentDissected)
 			{
-				qDebug("Moving down...");
-				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
-				break;
+				if (puzzleCurrentSlideSpot[0].gridPoint.x() == piece.gridPoint.x()
+					&& puzzleCurrentSlideSpot[0].gridPoint.y() + 1 == piece.gridPoint.y())
+				{
+					qDebug("Moving down...");
+					swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+					break;
+				}
 			}
-		}
-		break;
-	case SlideDir::UP:
-		for (auto& piece : puzzleCurrentDissected)
-		{
-			if (puzzleCurrentSlideSpot[0].gridPoint.x() == piece.gridPoint.x()
-				&& puzzleCurrentSlideSpot[0].gridPoint.y() - 1 == piece.gridPoint.y())
+			break;
+		case MoveDir::UP:
+			for (auto& piece : puzzleCurrentDissected)
 			{
-				qDebug("Moving up...");
-				swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
-				break;
+				if (puzzleCurrentSlideSpot[0].gridPoint.x() == piece.gridPoint.x()
+					&& puzzleCurrentSlideSpot[0].gridPoint.y() - 1 == piece.gridPoint.y())
+				{
+					qDebug("Moving up...");
+					swapPuzzlePieceLocation(puzzleCurrentSlideSpot[0], piece);
+					break;
+				}
 			}
+			break;
 		}
-		break;
 	}
+	else if (puzzleType == PuzzleType::ROTATION)
+	{
+		switch (moveDir)
+		{
+		case MoveDir::RIGHT:
+			simulatedMoveGridPoint.rx()++;
+			qDebug("Moving right...");
+			break;
+		case MoveDir::LEFT:
+			simulatedMoveGridPoint.rx()--;
+			qDebug("Moving left...");
+			break;
+		case MoveDir::DOWN:
+			simulatedMoveGridPoint.ry()++;
+			qDebug("Moving down...");
+			break;
+		case MoveDir::UP:
+			simulatedMoveGridPoint.ry()--;
+			qDebug("Moving up...");
+			break;
+		}
+
+		int pieceIndex;
+		for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+		{
+			if (puzzleCurrentDissected[i].gridPoint == simulatedMoveGridPoint)
+			{
+				pieceIndex = i;
+				break;
+			}
+		}
+		std::vector<int> adjacentPieceIndices = getAdjacentToPiece(pieceIndex);
+		puzzleCurrentDissected[pieceIndex].item.get()->setRotation(getNextClockwiseRotationSimulated(pieceIndex));
+		for (int i = 0; i < adjacentPieceIndices.size(); i++)
+		{
+			puzzleCurrentDissected[i].item.get()->setRotation(getNextClockwiseRotationSimulated(pieceIndex));
+		}
+	}
+}
+
+std::vector<int> PuzzleDisplayScene::getAdjacentToPiece(const int pieceIndex)
+{
+	std::vector<int> adjacentPieceIndices;
+	for (int i = 0; i < puzzleCurrentDissected.size(); i++)
+	{
+		if (
+			(puzzleCurrentDissected[pieceIndex].gridPoint.x() == puzzleCurrentDissected[i].gridPoint.x()
+				&& (puzzleCurrentDissected[pieceIndex].gridPoint.y() + 1 == puzzleCurrentDissected[i].gridPoint.y() ||
+					puzzleCurrentDissected[pieceIndex].gridPoint.y() - 1 == puzzleCurrentDissected[i].gridPoint.y()))
+			||
+			(puzzleCurrentDissected[pieceIndex].gridPoint.y() == puzzleCurrentDissected[i].gridPoint.y()
+				&& (puzzleCurrentDissected[pieceIndex].gridPoint.x() + 1 == puzzleCurrentDissected[i].gridPoint.x() ||
+					puzzleCurrentDissected[pieceIndex].gridPoint.x() - 1 == puzzleCurrentDissected[i].gridPoint.x()))
+			)
+		{
+			adjacentPieceIndices.emplace_back(i);
+
+			// 4 is the maximum adjacent possible, so if we find that we can return early rather than
+			// checking the entire list (which may be long).
+			if (adjacentPieceIndices.size() == 4)
+				return adjacentPieceIndices;
+		}
+	}
+	return adjacentPieceIndices;
+}
+
+qreal PuzzleDisplayScene::getNextClockwiseRotationSimulated(const int pieceIndex)
+{
+	// For simulated, the process is done quickly when setting up a puzzle and there is no animation, so
+	// when switching back to 0, we can go straight from 270 to 0.
+	if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 0)
+		return 90;
+	else if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 90)
+		return 180;
+	else if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 180)
+		return 270;
+	else if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 270)
+		return 0;
+	else
+		return 0;
+}
+
+qreal PuzzleDisplayScene::getNextClockwiseRotationAnimated(const int pieceIndex)
+{
+	// For animated, the process is shown to the user, so go from 270 to 360 (the equivalent of 0).
+	// This way, we are animating clockwise. If we did 270 -> 0, the animation would go counter-clockwise.
+	// Then after the animation process and before puzzle complete check is done, the rotation needs
+	// to be manually set back to 0 if it's 360. 
+	if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 0)
+		return 90;
+	else if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 90)
+		return 180;
+	else if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 180)
+		return 270;
+	else if (puzzleCurrentDissected[pieceIndex].item.get()->rotation() == 270)
+		return 360;
+	else
+		return 0;
 }
 
 QString PuzzleDisplayScene::extractSubstringInbetweenQt(const QString strBegin, const QString strEnd, const QString &strExtractFrom)
