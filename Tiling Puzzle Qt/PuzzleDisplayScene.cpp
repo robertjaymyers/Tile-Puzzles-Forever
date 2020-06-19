@@ -168,8 +168,10 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 
 	for (auto& piece : puzzleCurrentDissected)
 	{
+		// Since we've already gotten the aspect ratiod size from the adjusted whole img, we can use that here
+		// and ignore aspect ratio on this scaling.
 		QPixmap temp = piece.originalImg;
-		piece.img = temp.scaled(roundedToMultiplierWidth / puzzlePiecesMultiplier, roundedToMultiplierHeight / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		piece.img = temp.scaled(roundedToMultiplierWidth / puzzlePiecesMultiplier, roundedToMultiplierHeight / puzzlePiecesMultiplier, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 		piece.item.get()->setPixmap(piece.img);
 		piece.item.get()->setPos
 		(
