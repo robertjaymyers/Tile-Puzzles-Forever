@@ -145,23 +145,31 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 	double centerOnX;
 	double centerOnY;
 
+	int roundedToMultiplierWidth = 0;
+	int roundedToMultiplierHeight = 0;
+
 	{
 		QPixmap temp = puzzleCurrentWholeImgOriginal;
 		puzzleCurrentWholeImg = temp.scaled(this->width(), this->height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
 		
+		roundedToMultiplierWidth = puzzlePiecesMultiplier * (floor(puzzleCurrentWholeImg.width() / puzzlePiecesMultiplier));
+		roundedToMultiplierHeight = puzzlePiecesMultiplier * (floor(puzzleCurrentWholeImg.height() / puzzlePiecesMultiplier));
+
+		puzzleCurrentWholeImg = puzzleCurrentWholeImg.copy(0, 0, roundedToMultiplierWidth, roundedToMultiplierHeight);
+
 		centerOnX = (this->width() - puzzleCurrentWholeImg.width()) / 2;
 		centerOnY = (this->height() - puzzleCurrentWholeImg.height()) / 2;
 
 		puzzleCurrentWholeItem.get()->setPixmap(puzzleCurrentWholeImg);
 		puzzleCurrentWholeItem.get()->setPos(QPointF(centerOnX, centerOnY));
 
-		puzzleCurrentWholeItem.get()->setTransformOriginPoint(puzzleCurrentWholeImg.width() / 2, puzzleCurrentWholeImg.height() / 2);
+		puzzleCurrentWholeItem.get()->setTransformOriginPoint((double)puzzleCurrentWholeImg.width() / 2, (double)puzzleCurrentWholeImg.height() / 2);
 	}
 
 	for (auto& piece : puzzleCurrentDissected)
 	{
 		QPixmap temp = piece.originalImg;
-		piece.img = temp.scaled(this->width() / puzzlePiecesMultiplier, this->height() / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		piece.img = temp.scaled(roundedToMultiplierWidth / puzzlePiecesMultiplier, roundedToMultiplierHeight / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 		piece.item.get()->setPixmap(piece.img);
 		piece.item.get()->setPos
 		(
@@ -172,13 +180,13 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 			)
 		);
 
-		piece.item.get()->setTransformOriginPoint(piece.img.width() / 2, piece.img.height() / 2);
+		piece.item.get()->setTransformOriginPoint((double)piece.img.width() / 2, (double)piece.img.height() / 2);
 	}
 
 	for (auto& piece : puzzleCurrentSlideSpot)
 	{
 		QPixmap temp = piece.originalImg;
-		piece.img = temp.scaled(this->width() / puzzlePiecesMultiplier, this->height() / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		piece.img = temp.scaled(roundedToMultiplierWidth / puzzlePiecesMultiplier, roundedToMultiplierHeight / puzzlePiecesMultiplier, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 		piece.item.get()->setPixmap(piece.img);
 		piece.item.get()->setPos
 		(
@@ -189,7 +197,7 @@ void PuzzleDisplayScene::resizeScaleSmooth()
 			)
 		);
 
-		piece.item.get()->setTransformOriginPoint(piece.img.width() / 2, piece.img.height() / 2);
+		piece.item.get()->setTransformOriginPoint((double)piece.img.width() / 2, (double)piece.img.height() / 2);
 	}
 }
 
