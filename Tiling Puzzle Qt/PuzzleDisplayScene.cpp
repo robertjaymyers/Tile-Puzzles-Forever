@@ -34,10 +34,15 @@ PuzzleDisplayScene::PuzzleDisplayScene(QObject *parent)
 				if (piece.item.get()->rotation() == 360)
 					piece.item.get()->setRotation(0);
 			}
-			if (puzzleSolved(PuzzleSolvedType::ROTATION))
+			// We check for in progress state to ensure that if multiple animations would somehow trigger
+			// puzzle solved one after another, transition will only happen once.
+			if (gameState == GameState::SOLVING)
 			{
-				qDebug("WINNER!");
-				startSplashTransition();
+				if (puzzleSolved(PuzzleSolvedType::ROTATION))
+				{
+					qDebug("WINNER!");
+					startSplashTransition();
+				}
 			}
 		});
 	}
@@ -88,7 +93,7 @@ void PuzzleDisplayScene::setPuzzleApplyChanges()
 
 	if (!tempPuzzleType.isEmpty())
 	{
-		QString extracted = extractSubstringInbetweenQt("Puzzle Type: ", "", tempPuzzleType);
+		QString extracted = extractSubstringInbetweenQt(configBtnTextLeadPuzzleType, "", tempPuzzleType);
 
 		qDebug() << extracted;
 
@@ -101,7 +106,7 @@ void PuzzleDisplayScene::setPuzzleApplyChanges()
 	}
 	if (!tempPuzzleMultiplier.isEmpty())
 	{
-		puzzlePiecesMultiplier = sqrt(extractSubstringInbetweenQt("Puzzle Pieces: ", "", tempPuzzleMultiplier).toInt());
+		puzzlePiecesMultiplier = sqrt(extractSubstringInbetweenQt(configBtnTextLeadPuzzleMultiplier, "", tempPuzzleMultiplier).toInt());
 	}
 
 	auto finishPuzzleSetup = [=]() {
@@ -314,9 +319,6 @@ void PuzzleDisplayScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 			}
 			else if (puzzleType == PuzzleType::ROTATION)
 			{
-				// We only need to check if clicked on a spot adjacent to slide spot
-				// (one of a few possibilities)
-				// whichever is clicked swaps position with slide spot.
 				for (int i = 0; i < puzzleCurrentDissected.size(); i++)
 				{
 					if (puzzleCurrentDissected[i].item.get()->contains(puzzleCurrentDissected[i].item.get()->mapFromScene(event->scenePos())))

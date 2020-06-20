@@ -15,9 +15,9 @@ This file is part of Tile Puzzles Forever.
 #include "TilingPuzzleQt.h"
 
 TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
-    : QMainWindow(parent)
+	: QMainWindow(parent)
 {
-    ui.setupUi(this);
+	ui.setupUi(this);
 
 	setWindowState(Qt::WindowMaximized);
 
@@ -33,40 +33,29 @@ TilingPuzzleQt::TilingPuzzleQt(QWidget *parent)
 
 	configBtnPuzzlePath.get()->setText("Load New Puzzle Set From...");
 	configBtnPuzzlePath.get()->setFocusPolicy(Qt::NoFocus);
-	configBtnPuzzlePath.get()->setMaximumWidth(200);
+	configBtnPuzzlePath.get()->setMaximumWidth(configBtnMaxWidth);
 
-	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: "));
-	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: Rearrangement"));
-	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: Sliding"));
-	configBtnPuzzleType.get()->addItem(tr("Puzzle Type: Rotation"));
+	for (const auto& itemStr : configBtnTextListPuzzleType)
+		configBtnPuzzleType.get()->addItem(configBtnTextLeadPuzzleType + itemStr);
 	configBtnPuzzleType.get()->setFocusPolicy(Qt::NoFocus);
-	configBtnPuzzleType.get()->setMaximumWidth(200);
+	configBtnPuzzleType.get()->setMaximumWidth(configBtnMaxWidth);
 	configBtnPuzzleType.get()->setCurrentIndex(0);
 
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: "));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 4"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 9"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 16"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 25"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 36"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 49"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 64"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 81"));
-	configBtnPuzzleMultiplier.get()->addItem(tr("Puzzle Pieces: 100"));
+	for (const auto& itemStr : configBtnTextListPuzzleMultiplier)
+		configBtnPuzzleMultiplier.get()->addItem(configBtnTextLeadPuzzleMultiplier + itemStr);
 	configBtnPuzzleMultiplier.get()->setFocusPolicy(Qt::NoFocus);
-	configBtnPuzzleMultiplier.get()->setMaximumWidth(200);
+	configBtnPuzzleMultiplier.get()->setMaximumWidth(configBtnMaxWidth);
 	configBtnPuzzleMultiplier.get()->setCurrentIndex(0);
 
 	configBtnApplyChanges.get()->setText("Apply Changes");
 	configBtnApplyChanges.get()->setToolTip("This will remove the current puzzle.");
 	configBtnApplyChanges.get()->setFocusPolicy(Qt::NoFocus);
-	configBtnApplyChanges.get()->setMaximumWidth(200);
+	configBtnApplyChanges.get()->setMaximumWidth(configBtnMaxWidth);
 	configBtnApplyChanges.get()->setVisible(false);
 
 	configBtnHideUi.get()->setText("Fullscreen | [ESC] to Exit");
 	configBtnHideUi.get()->setFocusPolicy(Qt::NoFocus);
-	configBtnHideUi.get()->setMaximumWidth(200);
-	configBtnHideUi.get()->setVisible(true);
+	configBtnHideUi.get()->setMaximumWidth(configBtnMaxWidth);
 
 	uiLayout.get()->setAlignment(Qt::AlignLeft);
 	uiLayout.get()->addWidget(configBtnPuzzlePath.get(), 0);

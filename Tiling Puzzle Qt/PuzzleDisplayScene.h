@@ -13,6 +13,7 @@ This file is part of Tile Puzzles Forever.
 */
 
 #pragma once
+#include "Satan.h"
 #include "PuzzlePixmapItem.h"
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>

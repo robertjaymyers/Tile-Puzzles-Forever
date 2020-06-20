@@ -16,6 +16,7 @@ This file is part of Tile Puzzles Forever.
 
 #include <QtWidgets/QMainWindow>
 #include "ui_TilingPuzzleQt.h"
+#include "Satan.h"
 #include "PuzzleDisplay.h"
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -49,6 +50,21 @@ private:
 
 	std::unique_ptr<QGroupBox> uiGroup = std::make_unique<QGroupBox>();
 	std::unique_ptr<QHBoxLayout> uiLayout = std::make_unique<QHBoxLayout>();
+
+	const int configBtnMaxWidth = 200;
+
+	const QStringList configBtnTextListPuzzleType = QStringList() 
+		<< ""
+		<< "Rearrangement"
+		<< "Sliding"
+		<< "Rotation"
+		;
+
+	// Numbers should be perfect squares, so we can get a single multiplier number for dimensions of puzzle.
+	// Ex: sqrt(9)=3, so our multiplier is 3, making the puzzle 3 pieces by 3 pieces, or 9 pieces total.
+	const QStringList configBtnTextListPuzzleMultiplier = QStringList()
+		<< "" << "4" << "9" << "16" << "25" << "36" << "49" << "64" << "81" << "100"
+		;
 
 	std::unique_ptr<QPushButton> configBtnPuzzlePath = std::make_unique<QPushButton>();
 	std::unique_ptr<QComboBox> configBtnPuzzleType = std::make_unique<QComboBox>();

@@ -18,8 +18,6 @@ PuzzleDisplay::PuzzleDisplay(QWidget *parent)
 	: QGraphicsView(parent)
 {
 	setRenderHint(QPainter::SmoothPixmapTransform);
-
-	//scene.get()->setParent(this->parent());
 	setScene(scene.get());
 
 	/*
